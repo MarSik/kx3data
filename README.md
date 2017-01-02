@@ -11,3 +11,7 @@ remote antenna tuner.
 
 - Java 8 with JavaFX 2 support
 
+## Development hints
+
+- If your Scene builder (Gluon) eats too much memory, start it with -Dprism.order=sw
+
