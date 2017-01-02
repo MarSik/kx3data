@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.marsik.ham.kx3tool.ui.MainController">
+   <children>
+      <HBox fx:id="radio_line" prefHeight="0.0" prefWidth="600.0">
+         <children>
+            <Label fx:id="rigInfo" text="Label" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets bottom="2.0" left="5.0" top="2.0" />
+               </HBox.margin></Label>
+         </children>
+      </HBox>
+      <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+        <tabs>
+          <Tab text="Connection">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <GridPane layoutX="154.0" layoutY="112.0" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
+                          <columnConstraints>
+                            <ColumnConstraints hgrow="ALWAYS" maxWidth="353.0" minWidth="10.0" prefWidth="295.0" />
+                            <ColumnConstraints hgrow="ALWAYS" maxWidth="343.0" minWidth="10.0" prefWidth="295.0" />
+                          </columnConstraints>
+                          <rowConstraints>
+                            <RowConstraints maxHeight="158.0" minHeight="10.0" prefHeight="156.0" vgrow="SOMETIMES" />
+                            <RowConstraints maxHeight="207.0" minHeight="10.0" prefHeight="169.0" vgrow="SOMETIMES" />
+                          </rowConstraints>
+                           <children>
+                              <GridPane GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.vgrow="SOMETIMES">
+                                <columnConstraints>
+                                  <ColumnConstraints hgrow="NEVER" maxWidth="1.7976931348623157E308" />
+                                  <ColumnConstraints hgrow="ALWAYS" maxWidth="500.0" minWidth="10.0" prefWidth="499.0" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                </rowConstraints>
+                                 <children>
+                                    <Label text="RIG">
+                                       <font>
+                                          <Font name="System Bold" size="13.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="Serial port" GridPane.rowIndex="1">
+                                       <GridPane.margin>
+                                          <Insets right="5.0" />
+                                       </GridPane.margin></Label>
+                                    <Label text="Baud rate" GridPane.columnSpan="2147483647" GridPane.rowIndex="2" />
+                                    <ChoiceBox fx:id="rigBaudRate" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                    <ComboBox fx:id="rigSerialPort" editable="true" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
+                                    <FlowPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                       <children>
+                                          <Button fx:id="rigConnect" mnemonicParsing="false" onMouseClicked="#onRigConnect" text="Connect">
+                                             <FlowPane.margin>
+                                                <Insets right="5.0" />
+                                             </FlowPane.margin>
+                                          </Button>
+                                          <Button fx:id="rigDisconnect" mnemonicParsing="false" onMouseClicked="#onRigDisconnect" text="Disconnect" />
+                                       </children>
+                                    </FlowPane>
+                                 </children>
+                              </GridPane>
+                              <GridPane GridPane.hgrow="ALWAYS" GridPane.rowIndex="1">
+                                <columnConstraints>
+                                  <ColumnConstraints hgrow="NEVER" />
+                                  <ColumnConstraints hgrow="SOMETIMES" maxWidth="286.0" minWidth="10.0" prefWidth="221.0" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                </rowConstraints>
+                                 <children>
+                                    <Label text="ATU">
+                                       <font>
+                                          <Font name="System Bold" size="13.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="Serial port" GridPane.rowIndex="1">
+                                       <padding>
+                                          <Insets right="5.0" />
+                                       </padding>
+                                    </Label>
+                                    <Label text="Baud rate" GridPane.rowIndex="2" />
+                                    <Label text="Protocol" GridPane.rowIndex="3" />
+                                    <FlowPane prefHeight="46.0" prefWidth="268.0" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                                       <children>
+                                          <Button fx:id="atuConnect" mnemonicParsing="false" text="Connect">
+                                             <FlowPane.margin>
+                                                <Insets right="5.0" />
+                                             </FlowPane.margin>
+                                          </Button>
+                                          <Button fx:id="atuDisconnect" mnemonicParsing="false" text="Disconnect" />
+                                       </children>
+                                    </FlowPane>
+                                    <ChoiceBox fx:id="atuBaudRate" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
+                                    <ChoiceBox fx:id="atuProtocol" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="3" />
+                                    <ComboBox fx:id="atuSerialPort" editable="true" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
+                                 </children>
+                              </GridPane>
+                              <GridPane GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1">
+                                <columnConstraints>
+                                  <ColumnConstraints hgrow="NEVER" />
+                                  <ColumnConstraints hgrow="SOMETIMES" maxWidth="202.0" minWidth="10.0" prefWidth="201.0" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                                </rowConstraints>
+                                 <children>
+                                    <Label text="miniVNA">
+                                       <font>
+                                          <Font name="System Bold" size="13.0" />
+                                       </font>
+                                    </Label>
+                                    <Label text="Serial port" GridPane.rowIndex="1">
+                                       <padding>
+                                          <Insets right="5.0" />
+                                       </padding>
+                                    </Label>
+                                    <Label text="Baud rate" GridPane.rowIndex="2" />
+                                    <ComboBox fx:id="vnaSerialPort" editable="true" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
+                                    <ChoiceBox fx:id="vnaBaudRate" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
+                                    <FlowPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                       <children>
+                                          <Button fx:id="vnaConnect" mnemonicParsing="false" text="Connect">
+                                             <FlowPane.margin>
+                                                <Insets right="5.0" />
+                                             </FlowPane.margin>
+                                          </Button>
+                                          <Button fx:id="vnaDisconnect" mnemonicParsing="false" text="Disconnect" />
+                                       </children>
+                                    </FlowPane>
+                                 </children>
+                              </GridPane>
+                           </children>
+                        </GridPane>
+                     </children>
+                  </AnchorPane>
+            </content>
+          </Tab>
+          <Tab text="RIG">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+            </content>
+          </Tab>
+            <Tab text="ATU">
+              <content>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+            <Tab text="Data">
+              <content>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <VBox layoutX="250.0" layoutY="68.0" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
+                           <children>
+                              <TextArea fx:id="dataRx" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
+                              <FlowPane prefHeight="64.0" prefWidth="590.0" VBox.vgrow="NEVER">
+                                 <children>
+                                    <Button fx:id="macro1" mnemonicParsing="false" onContextMenuRequested="#onSetMacro1" onMouseClicked="#onMacro1" text="Macro 1">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro2" mnemonicParsing="false" onContextMenuRequested="#onSetMacro2" onMouseClicked="#onMacro2" text="Macro 2">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro3" mnemonicParsing="false" onContextMenuRequested="#onSetMacro3" onMouseClicked="#onMacro3" text="Macro 3">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro4" mnemonicParsing="false" onContextMenuRequested="#onSetMacro4" onMouseClicked="#onMacro4" text="Macro 4">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro5" mnemonicParsing="false" onContextMenuRequested="#onSetMacro5" onMouseClicked="#onMacro5" text="Macro 5">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro6" mnemonicParsing="false" onContextMenuRequested="#onSetMacro6" onMouseClicked="#onMacro6" text="Macro 6">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro7" mnemonicParsing="false" onContextMenuRequested="#onSetMacro7" onMouseClicked="#onMacro7" text="Macro 7">
+                                       <FlowPane.margin>
+                                          <Insets right="5.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="macro8" mnemonicParsing="false" onContextMenuRequested="#onSetMacro8" onMouseClicked="#onMacro8" text="Macro 8" />
+                                 </children>
+                                 <VBox.margin>
+                                    <Insets bottom="2.0" top="2.0" />
+                                 </VBox.margin>
+                              </FlowPane>
+                              <TextArea fx:id="dataTx" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
+                              <FlowPane alignment="BOTTOM_RIGHT" prefHeight="44.0" prefWidth="590.0" VBox.vgrow="NEVER">
+                                 <children>
+                                    <Button fx:id="dataSend" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
+                                 </children>
+                              </FlowPane>
+                           </children>
+                        </VBox>
+                     </children></AnchorPane>
+              </content>
+            </Tab>
+            <Tab text="Log">
+              <content>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+              </content>
+            </Tab>
+        </tabs>
+      </TabPane>
+      <HBox prefHeight="0.0" prefWidth="600.0">
+         <children>
+            <Label fx:id="status_line" text="Label" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets bottom="2.0" left="5.0" top="2.0" />
+               </HBox.margin></Label>
+         </children>
+      </HBox>
+   </children>
+</VBox>

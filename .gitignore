@@ -1,0 +1,14 @@
+target/
+build/
+.gradle
+.DS_Store
+out
+*.iml
+*.ipr
+*.iws
+.idea
+.settings
+.classpath
+.project
+application.properties
+pom.xml.versionsBackup
