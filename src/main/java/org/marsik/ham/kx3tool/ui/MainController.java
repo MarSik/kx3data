@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -19,7 +20,7 @@ import org.marsik.ham.kx3tool.radio.RadioConnection;
 import org.marsik.ham.kx3tool.radio.RadioInfo;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 
-public class MainController implements Initializable, RadioConnection.InfoUpdated {
+public class MainController implements Initializable, RadioConnection.InfoUpdated, RadioConnection.DataDecoded {
     @FXML private Button dataSend;
 
     @FXML private TextArea dataTx;
@@ -103,6 +104,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     public void onRigConnect(MouseEvent event) {
         try {
             radioConnection.addInfoUpdateListener(this);
+            radioConnection.addDataListener(this);
             radioConnection.open(rigSerialPort.getValue(), rigBaudRate.getValue());
             rigBaudRate.setDisable(true);
             rigSerialPort.setDisable(true);
@@ -199,9 +201,18 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
     @Override
     public void notify(RadioInfo info) {
-        rigInfo.setText(info.getRadioModel().name()
-                + " " + info.getFrequency().toString()
-                + " " + info.getMode().name()
-                + " " + (info.isTx() ? "TX" : "RX"));
+        final String statusText = info.getRadioModel().name()
+                + " " + (info.getFrequency() != null ? info.getFrequency().toString() : "")
+                + " " + (info.getMode() != null ? info.getMode().name() : "")
+                + " " + (info.isTx() ? "TX" : "RX");
+
+        // Meke sure this is executed from the right thread (UI)
+        Platform.runLater(() -> rigInfo.setText(statusText));
+    }
+
+    @Override
+    public void received(String s) {
+        // Meke sure this is executed from the right thread (UI)
+        Platform.runLater(() -> dataRx.appendText(s));
     }
 }

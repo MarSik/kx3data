@@ -65,6 +65,10 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
         return serialBuffer.length();
     }
 
+    public String peek(int chars) {
+        return serialBuffer.substring(0, chars);
+    }
+
     public boolean startsWith(String prefix) {
         return serialBuffer.startsWith(prefix);
     }
