@@ -3,6 +3,8 @@ package org.marsik.ham.kx3tool.radio;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,10 +13,15 @@ import jssc.SerialPortException;
 import lombok.Data;
 import org.marsik.ham.kx3tool.serial.SerialConnection;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Data
 @Singleton
 public class RadioConnection {
+    private static final Logger logger = LoggerFactory.getLogger(RadioConnection.class);
+    private static final int DATA_POLL_DELAY_MS = 1000;
+
     @Inject
     SerialUtil serialUtil;
 
@@ -24,7 +31,11 @@ public class RadioConnection {
     WeakHashMap<InfoUpdated, Void> listeners = new WeakHashMap<>();
     WeakHashMap<DataDecoded, Void> dataListeners = new WeakHashMap<>();
 
+    Timer receiveDataTimer = new Timer("Radio data poller", true);
+
     private SerialConnection serialPort;
+
+    private String txBuffer = "";
 
     public static Pattern IF_PATTERN = Pattern.compile("IF(?<f>[0-9]{11})     (?<offset>[+-][0-9]{4})(?<rit>[01])(?<xit>[01]) 00(?<tx>[01])(?<mode>.)(?<vfo>[01])(?<scan>[01])(?<split>[01]).(?<data>[0123])1 ;");
 
@@ -41,7 +52,9 @@ public class RadioConnection {
 
     public void sendCommand(String cmd) {
         try {
-            serialPort.write(cmd);
+            if (serialPort != null) {
+                serialPort.write(cmd);
+            }
         } catch (SerialPortException e) {
             e.printStackTrace();
         }
@@ -53,7 +66,7 @@ public class RadioConnection {
 
     private void processReceivedData() {
         while (true) {
-            if (serialPort.startsWith("K3")) {
+             if (serialPort.startsWith("K3")) {
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
 
@@ -64,13 +77,14 @@ public class RadioConnection {
                 sendCommand("OM;AI2;IF;"); // Prepare K3 specific mode
                 info.setRadioModel(RadioInfo.RadioModel.K3);
                 notifyListeners();
+                askForData(0); // TODO Ask only in data modes?
             } else if (serialPort.startsWith("FA")) {
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
 
                 info.setFrequency(Long.parseLong(resp.substring(2, 13)));
                 notifyListeners();
-            } else if (serialPort.startsWith("IF")) {
+            } else if (serialPort.startsWith("IF")) { // TODO why isn't IF received periodically?
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
 
@@ -127,14 +141,33 @@ public class RadioConnection {
                     notifyListeners();
                 }
             } else if (serialPort.startsWith("TB")) {
-                if (serialPort.readyCount() < 5) return;
+                logger.debug("Checking readiness of TB: '{}'", serialPort.peek(serialPort.readyCount()));
+                if (serialPort.readyCount() < 5) {
+                    logger.debug(".. Number fields not ready.");
+                    return;
+                }
+
                 String resp = serialPort.peek(5).substring(2);
                 int txPending = Integer.valueOf(resp.substring(0, 1));
                 int rxReady = Integer.valueOf(resp.substring(1));
 
-                if (serialPort.readyCount() < (6 + rxReady)) return;
+                if (serialPort.readyCount() < (6 + rxReady)) {
+                    logger.debug(".. Data block not ready");
+                    return;
+                }
+
                 resp = serialPort.readLength(6 + rxReady);
                 resp = resp.substring(5);
+                resp = resp.substring(0, resp.length() - 1);
+
+                askForData(DATA_POLL_DELAY_MS);
+
+                if (txPending < 9) {
+                    sendDataFromBuffer(9 - txPending);
+                }
+
+                // No new data received
+                if (resp.isEmpty()) continue;
 
                 for (DataDecoded listener: dataListeners.keySet()) {
                     listener.received(resp);
@@ -171,5 +204,31 @@ public class RadioConnection {
 
     public interface DataDecoded {
         void received(String s);
+    }
+
+    private void askForData(long delayMs) {
+        logger.debug("Asking for more data in {} ms", delayMs);
+        receiveDataTimer.schedule(new ReceiveDataTimerTask(), delayMs);
+    }
+
+    private class ReceiveDataTimerTask extends TimerTask {
+        @Override
+        public void run() {
+            sendCommand("TB;");
+        }
+    }
+
+    private void sendDataFromBuffer(int count) {
+        if (txBuffer.isEmpty()) {
+            return;
+        }
+
+        String part = txBuffer.substring(0, count);
+        sendCommand("KYW" + part + ";");
+        txBuffer = txBuffer.substring(count);
+    }
+
+    public void sendData(String data) {
+        txBuffer = txBuffer + data;
     }
 }

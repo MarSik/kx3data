@@ -225,7 +225,12 @@
                               <TextArea fx:id="dataTx" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
                               <FlowPane alignment="BOTTOM_RIGHT" prefHeight="44.0" prefWidth="590.0" VBox.vgrow="NEVER">
                                  <children>
-                                    <Button fx:id="dataSend" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
+                                    <Button mnemonicParsing="false" onMouseClicked="#onTxClear" text="Clear">
+                                       <FlowPane.margin>
+                                          <Insets right="10.0" />
+                                       </FlowPane.margin>
+                                    </Button>
+                                    <Button fx:id="dataSend" defaultButton="true" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
                                  </children>
                               </FlowPane>
                            </children>

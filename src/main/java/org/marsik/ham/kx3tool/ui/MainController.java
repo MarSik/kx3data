@@ -132,8 +132,14 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     }
 
     public void onDataSend(MouseEvent event) {
+        radioConnection.sendData(dataTx.getText());
         dataTx.clear();
     }
+
+    public void onTxClear(MouseEvent event) {
+        dataTx.clear();
+    }
+
 
     public void onSetMacro1(MouseEvent event) {
 
