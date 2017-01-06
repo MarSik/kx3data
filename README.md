@@ -9,7 +9,7 @@ remote antenna tuner.
 
 ## Runtime requirements
 
-- Java 8 with JavaFX 2 support
+- Java 8 with JavaFX support (at least 8u40 is necessary)
 
 ## Development hints
 

@@ -87,6 +87,13 @@
             <version>${weld.version}</version>
         </dependency>
 
+	<!-- UI extensions //-->
+        <dependency>
+          <groupId>org.controlsfx</groupId>
+          <artifactId>controlsfx</artifactId>
+          <version>8.40.12</version>
+        </dependency>
+
         <!-- Testing libs //-->
         <dependency>
             <groupId>junit</groupId>
