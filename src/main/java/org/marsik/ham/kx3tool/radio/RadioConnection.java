@@ -3,6 +3,8 @@ package org.marsik.ham.kx3tool.radio;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
@@ -28,8 +30,8 @@ public class RadioConnection {
     @Inject
     RadioInfo info;
 
-    WeakHashMap<InfoUpdated, Void> listeners = new WeakHashMap<>();
-    WeakHashMap<DataDecoded, Void> dataListeners = new WeakHashMap<>();
+    Map<InfoUpdated, Void> listeners = new HashMap<>();
+    Map<DataDecoded, Void> dataListeners = new HashMap<>();
 
     Timer receiveDataTimer = new Timer("Radio data poller", true);
 
@@ -65,6 +67,8 @@ public class RadioConnection {
     }
 
     private void processReceivedData() {
+        logger.debug("Process received data.");
+
         while (true) {
              if (serialPort.startsWith("K3")) {
                 String resp = readSimpleResponse();
@@ -157,6 +161,13 @@ public class RadioConnection {
                 }
 
                 resp = serialPort.readLength(6 + rxReady);
+
+                 if (!resp.endsWith(";")) {
+                     logger.warn("Invalid message received!");
+                     // Read until the next semicolon
+                     readSimpleResponse();
+                 }
+
                 resp = resp.substring(5);
                 resp = resp.substring(0, resp.length() - 1);
 

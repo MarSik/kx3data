@@ -12,6 +12,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
@@ -219,6 +220,15 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     @Override
     public void received(String s) {
         // Meke sure this is executed from the right thread (UI)
-        Platform.runLater(() -> dataRx.appendText(s));
+        Platform.runLater(() -> {
+            IndexRange selected = dataRx.getSelection();
+            int pos = dataRx.getCaretPosition();
+            int len = dataRx.getLength();
+
+            dataRx.appendText(s);
+
+            dataRx.selectRange(selected.getStart(), selected.getEnd());
+            if (pos == len) dataRx.positionCaret(pos);
+        });
     }
 }

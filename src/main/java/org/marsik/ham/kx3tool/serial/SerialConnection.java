@@ -1,5 +1,8 @@
 package org.marsik.ham.kx3tool.serial;
 
+import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.WeakHashMap;
 
 import jssc.SerialPort;
@@ -16,8 +19,8 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
     private String serialBuffer = "";
     private final String portName;
 
-    private final WeakHashMap<ReceiveListener, Void> receiveListeners = new WeakHashMap<>();
-    private final WeakHashMap<CloseListener, Void> closeListeners = new WeakHashMap<>();
+    private final Map<ReceiveListener, Void> receiveListeners = new HashMap<>();
+    private final Map<CloseListener, Void> closeListeners = new HashMap<>();
 
     public SerialConnection(String portName, int baudRate) throws SerialPortException {
         this.port = new SerialPort(portName);
@@ -42,16 +45,22 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
 
         if (event.isRXCHAR() && event.getEventValue() > 0) {
             try {
-                final String data = port.readString(event.getEventValue());
+                final String data = new String(port.readBytes(), "US-ASCII");
+                assert data.length() >= event.getEventValue();
+
                 logger.debug("Received: {}", data);
                 synchronized (this) {
                     serialBuffer = serialBuffer + data;
                 }
             } catch (SerialPortException e) {
                 e.printStackTrace();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
             }
 
+            logger.debug("Receive done, calling listeners: {}", receiveListeners.size());
             for (ReceiveListener listener: receiveListeners.keySet()) {
+                logger.debug("Listener: {}", listener);
                 listener.dataReceived(this);
             }
         }
