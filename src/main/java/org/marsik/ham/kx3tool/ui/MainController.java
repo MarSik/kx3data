@@ -1,10 +1,20 @@
 package org.marsik.ham.kx3tool.ui;
 
+import static java.time.temporal.ChronoField.HOUR_OF_DAY;
+import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
+import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
+
 import javax.inject.Inject;
 import java.net.URL;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -16,12 +26,13 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import jssc.SerialPortException;
 import org.marsik.ham.kx3tool.radio.RadioConnection;
 import org.marsik.ham.kx3tool.radio.RadioInfo;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 
-public class MainController implements Initializable, RadioConnection.InfoUpdated, RadioConnection.DataDecoded {
+public class MainController implements Initializable, RadioConnection.InfoUpdated {
     @FXML private Button dataSend;
 
     @FXML private TextArea dataTx;
@@ -43,7 +54,24 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     @FXML private Button vnaConnect;
     @FXML private Button vnaDisconnect;
 
-    @FXML private Label rigInfo;
+    @FXML private Label radioLine;
+    @FXML private Label statusLine;
+
+    @FXML private HBox txInProgress;
+    @FXML private TextArea txBuffer;
+    @FXML private Button abortTx;
+
+    private static final DateTimeFormatter SIMPLE_LOCAL_TIME;
+    static {
+        SIMPLE_LOCAL_TIME = new DateTimeFormatterBuilder()
+                .appendValue(HOUR_OF_DAY, 2)
+                .appendLiteral(':')
+                .appendValue(MINUTE_OF_HOUR, 2)
+                .optionalStart()
+                .appendLiteral(':')
+                .appendValue(SECOND_OF_MINUTE, 2)
+                .toFormatter();
+    }
 
     @Inject
     private SerialUtil serialUtil;
@@ -51,7 +79,24 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     @Inject
     private RadioConnection radioConnection;
 
+    @Inject
+    private RadioInfo radioInfo;
+
+    private Timer clockTimer = new Timer("Clock timer", true);
+
+    private RadioConnection.AdditionalDataEvent dataReceived;
+    private RadioConnection.AdditionalDataEvent dataQueued;
+    private RadioConnection.DataPushedFromQueue dataSent = count -> {};
+    private RadioConnection.DataPushedFromQueue dataTransmitted;
+
     public void initialize(URL location, ResourceBundle resources) {
+        dataReceived = s -> Platform.runLater(() -> appendKeepSelection(dataRx, s));
+        dataQueued = s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s));
+        dataTransmitted = c -> Platform.runLater(() -> {
+            String removed = removeFromStartKeepSelection(txBuffer, c);
+            appendKeepSelection(dataRx, removed);
+        });
+
         rigConnect.setDisable(false);
         rigDisconnect.setDisable(true);
         vnaConnect.setDisable(false);
@@ -75,6 +120,14 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
         refreshSerialPortList(rigSerialPort);
         refreshSerialPortList(atuSerialPort);
         refreshSerialPortList(vnaSerialPort);
+
+        // Start clock
+        clockTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                MainController.this.notify(radioInfo);
+            }
+        }, 0, 1000);
     }
 
     private void refreshSerialPortList(ComboBox<String> combobox) {
@@ -105,7 +158,11 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     public void onRigConnect(MouseEvent event) {
         try {
             radioConnection.addInfoUpdateListener(this);
-            radioConnection.addDataListener(this);
+            radioConnection.addReceivedDataListener(dataReceived);
+            radioConnection.addQueuedDataListener(dataQueued);
+            radioConnection.addDataSentListener(dataSent);
+            radioConnection.addDataTransmittedListener(dataTransmitted);
+
             radioConnection.open(rigSerialPort.getValue(), rigBaudRate.getValue());
             rigBaudRate.setDisable(true);
             rigSerialPort.setDisable(true);
@@ -135,6 +192,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
     public void onDataSend(MouseEvent event) {
         radioConnection.sendData(dataTx.getText());
         dataTx.clear();
+        txInProgress.setVisible(true);
     }
 
     public void onTxClear(MouseEvent event) {
@@ -208,27 +266,56 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
     @Override
     public void notify(RadioInfo info) {
-        final String statusText = info.getRadioModel().name()
-                + " " + (info.getFrequency() != null ? info.getFrequency().toString() : "")
-                + " " + (info.getMode() != null ? info.getMode().name() : "")
-                + " " + (info.isTx() ? "TX" : "RX");
+        TimeZone utc = TimeZone.getTimeZone("UTC");
+        LocalTime now = LocalTime.now(utc.toZoneId());
+
+        String radioText = now.format(SIMPLE_LOCAL_TIME);
+
+        if (info.getRadioModel() != RadioInfo.RadioModel.UNKNOWN) {
+            radioText += " " + (info.getFrequency() != null ? info.getFrequency().toString() : "")
+                    + " " + (info.getMode() != null ? info.getMode().name() : "")
+                    + " " + (info.isTx() ? "TX" : "RX");
+        }
+
+        final String statusText = info.getRadioModel().name();
 
         // Meke sure this is executed from the right thread (UI)
-        Platform.runLater(() -> rigInfo.setText(statusText));
+        final String finalRadioText = radioText;
+        Platform.runLater(() -> radioLine.setText(finalRadioText));
+        Platform.runLater(() -> statusLine.setText(statusText));
     }
 
-    @Override
-    public void received(String s) {
+    private void appendKeepSelection(TextArea area, String s) {
+        IndexRange selected = area.getSelection();
+        int pos = area.getCaretPosition();
+        int len = area.getLength();
+
+        area.appendText(s);
+
+        area.selectRange(selected.getStart(), selected.getEnd());
+        if (pos == len) area.positionCaret(pos);
+    }
+
+    private String removeFromStartKeepSelection(TextArea area, int count) {
         // Meke sure this is executed from the right thread (UI)
-        Platform.runLater(() -> {
-            IndexRange selected = dataRx.getSelection();
-            int pos = dataRx.getCaretPosition();
-            int len = dataRx.getLength();
+        IndexRange selected = area.getSelection();
+        int pos = area.getCaretPosition();
+        int len = area.getLength();
 
-            dataRx.appendText(s);
+        final String oldContent = area.getText();
+        String newContent = oldContent.substring(count);
+        area.setText(newContent);
 
-            dataRx.selectRange(selected.getStart(), selected.getEnd());
-            if (pos == len) dataRx.positionCaret(pos);
-        });
+        int start = selected.getStart() - count;
+        if (start >= 0) {
+            selected = new IndexRange(start, selected.getEnd() - count);
+        } else if (selected.getEnd() + start >= 0) {
+            selected = new IndexRange(0, selected.getEnd() + start);
+        }
+
+        area.selectRange(selected.getStart(), selected.getEnd());
+        if (pos == len) area.positionCaret(pos);
+
+        return oldContent.substring(0, count);
     }
 }

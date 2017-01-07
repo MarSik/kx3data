@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,6 +22,7 @@ import org.slf4j.LoggerFactory;
 public class RadioConnection {
     private static final Logger logger = LoggerFactory.getLogger(RadioConnection.class);
     private static final int DATA_POLL_DELAY_MS = 1000;
+    private static final int TX_POLL_DELAY_MS = 250;
 
     @Inject
     SerialUtil serialUtil;
@@ -31,13 +31,18 @@ public class RadioConnection {
     RadioInfo info;
 
     Map<InfoUpdated, Void> listeners = new HashMap<>();
-    Map<DataDecoded, Void> dataListeners = new HashMap<>();
+    Map<AdditionalDataEvent, Void> rxDataListeners = new HashMap<>();
+    Map<AdditionalDataEvent, Void> queuedDataListeners = new HashMap<>();
+
+    Map<DataPushedFromQueue, Void> dataSentListeners = new HashMap<>();
+    Map<DataPushedFromQueue, Void> dataTransmittedListeners = new HashMap<>();
 
     Timer receiveDataTimer = new Timer("Radio data poller", true);
 
     private SerialConnection serialPort;
 
     private String txBuffer = "";
+    private int lastRadioTxBufferSize = 0;
 
     public static Pattern IF_PATTERN = Pattern.compile("IF(?<f>[0-9]{11})     (?<offset>[+-][0-9]{4})(?<rit>[01])(?<xit>[01]) 00(?<tx>[01])(?<mode>.)(?<vfo>[01])(?<scan>[01])(?<split>[01]).(?<data>[0123])1 ;");
 
@@ -145,22 +150,23 @@ public class RadioConnection {
                     notifyListeners();
                 }
             } else if (serialPort.startsWith("TB")) {
-                logger.debug("Checking readiness of TB: '{}'", serialPort.peek(serialPort.readyCount()));
-                if (serialPort.readyCount() < 5) {
-                    logger.debug(".. Number fields not ready.");
-                    return;
-                }
+                 logger.debug("Checking readiness of TB: '{}'", serialPort.peek(serialPort.readyCount()));
+                 if (serialPort.readyCount() < 5) {
+                     logger.debug(".. Number fields not ready.");
+                     return;
+                 }
 
-                String resp = serialPort.peek(5).substring(2);
-                int txPending = Integer.valueOf(resp.substring(0, 1));
-                int rxReady = Integer.valueOf(resp.substring(1));
+                 String resp = serialPort.peek(5).substring(2);
+                 int txPending = Integer.valueOf(resp.substring(0, 1));
+                 int rxReady = Integer.valueOf(resp.substring(1));
 
-                if (serialPort.readyCount() < (6 + rxReady)) {
-                    logger.debug(".. Data block not ready");
-                    return;
-                }
+                 final int readyCount = serialPort.readyCount();
+                 if (readyCount < (6 + rxReady)) {
+                     logger.debug(".. Data block not ready (ready {}, needed {})", readyCount, 6 + rxReady);
+                     return;
+                 }
 
-                resp = serialPort.readLength(6 + rxReady);
+                 resp = serialPort.readLength(6 + rxReady);
 
                  if (!resp.endsWith(";")) {
                      logger.warn("Invalid message received!");
@@ -168,26 +174,35 @@ public class RadioConnection {
                      readSimpleResponse();
                  }
 
-                resp = resp.substring(5);
-                resp = resp.substring(0, resp.length() - 1);
+                 resp = resp.substring(5);
+                 resp = resp.substring(0, resp.length() - 1);
 
-                askForData(DATA_POLL_DELAY_MS);
+                 askForData(txPending > 0 ? TX_POLL_DELAY_MS : DATA_POLL_DELAY_MS);
 
-                if (txPending < 9) {
-                    sendDataFromBuffer(9 - txPending);
-                }
+                 // Compute how many characters were actually sent
+                 int pushed = Math.max(lastRadioTxBufferSize - txPending, 0);
+                 if (pushed > 0) {
+                     for (DataPushedFromQueue listener : dataTransmittedListeners.keySet()) {
+                         listener.pushed(pushed);
+                     }
+                     lastRadioTxBufferSize = txPending;
+                 }
 
-                // No new data received
-                if (resp.isEmpty()) continue;
+                 if (txPending < 9) {
+                     sendDataFromBuffer(9 - txPending);
+                 }
 
-                for (DataDecoded listener: dataListeners.keySet()) {
-                    listener.received(resp);
-                }
-            } else {
-                // Consume and drop the next message
-                String resp = readSimpleResponse();
-                if (resp.isEmpty()) return;
-            }
+                 // No new data received
+                 if (resp.isEmpty()) continue;
+
+                 for (AdditionalDataEvent listener: rxDataListeners.keySet()) {
+                     listener.add(resp);
+                 }
+             } else {
+                 // Consume and drop the next message
+                 String resp = readSimpleResponse();
+                 if (resp.isEmpty()) return;
+             }
         }
     }
 
@@ -199,8 +214,20 @@ public class RadioConnection {
         listeners.put(listener, null);
     }
 
-    public void addDataListener(DataDecoded listener) {
-        dataListeners.put(listener, null);
+    public void addReceivedDataListener(AdditionalDataEvent listener) {
+        rxDataListeners.put(listener, null);
+    }
+
+    public void addQueuedDataListener(AdditionalDataEvent listener) {
+        queuedDataListeners.put(listener, null);
+    }
+
+    public void addDataSentListener(DataPushedFromQueue listener) {
+        dataSentListeners.put(listener, null);
+    }
+
+    public void addDataTransmittedListener(DataPushedFromQueue listener) {
+        dataTransmittedListeners.put(listener, null);
     }
 
     public void notifyListeners() {
@@ -213,12 +240,29 @@ public class RadioConnection {
         void notify(RadioInfo info);
     }
 
-    public interface DataDecoded {
-        void received(String s);
+    /**
+     * Additional data received and decoded or sent to queue for transmit
+     */
+    public interface AdditionalDataEvent {
+        /**
+         * @param s The new chunk of data that was received
+         */
+        void add(String s);
+    }
+
+    /**
+     * Data from queue sent to radio or transmitted
+     */
+    public interface DataPushedFromQueue {
+        /**
+         * @param count Number of characters pushed to the next stage
+         */
+        void pushed(int count);
     }
 
     private void askForData(long delayMs) {
         logger.debug("Asking for more data in {} ms", delayMs);
+        receiveDataTimer.purge();
         receiveDataTimer.schedule(new ReceiveDataTimerTask(), delayMs);
     }
 
@@ -234,12 +278,30 @@ public class RadioConnection {
             return;
         }
 
-        String part = txBuffer.substring(0, count);
-        sendCommand("KYW" + part + ";");
-        txBuffer = txBuffer.substring(count);
+        if (count == 0) {
+            return;
+        }
+
+        String part = txBuffer.substring(0, Math.min(count, txBuffer.length()));
+        sendCommand("KY " + part + ";");
+        txBuffer = txBuffer.substring(part.length());
+        askForData(TX_POLL_DELAY_MS);
+
+        for (DataPushedFromQueue listener: dataSentListeners.keySet()) {
+            listener.pushed(part.length());
+        }
+
+        lastRadioTxBufferSize += part.length();
     }
 
     public void sendData(String data) {
         txBuffer = txBuffer + data;
+
+        for (AdditionalDataEvent listener: queuedDataListeners.keySet()) {
+            listener.add(data);
+        }
+
+        processReceivedData();
+        sendDataFromBuffer(9 - lastRadioTxBufferSize);
     }
 }

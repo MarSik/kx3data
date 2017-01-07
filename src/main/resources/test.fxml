@@ -19,9 +19,9 @@
 
 <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.marsik.ham.kx3tool.ui.MainController">
    <children>
-      <HBox fx:id="radio_line" prefHeight="0.0" prefWidth="600.0">
+      <HBox prefHeight="0.0" prefWidth="600.0">
          <children>
-            <Label fx:id="rigInfo" text="Label" HBox.hgrow="ALWAYS">
+            <Label fx:id="radioLine" text="Label" HBox.hgrow="ALWAYS">
                <HBox.margin>
                   <Insets bottom="2.0" left="5.0" top="2.0" />
                </HBox.margin></Label>
@@ -179,6 +179,12 @@
                         <VBox layoutX="250.0" layoutY="68.0" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
                            <children>
                               <TextArea fx:id="dataRx" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
+                              <HBox fx:id="txInProgress" prefHeight="100.0" prefWidth="200.0">
+                                 <children>
+                                    <TextArea fx:id="txBuffer" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" HBox.hgrow="ALWAYS" />
+                                    <Button fx:id="abortTx" mnemonicParsing="false" text="Abort" />
+                                 </children>
+                              </HBox>
                               <FlowPane prefHeight="64.0" prefWidth="590.0" VBox.vgrow="NEVER">
                                  <children>
                                     <Button fx:id="macro1" mnemonicParsing="false" onContextMenuRequested="#onSetMacro1" onMouseClicked="#onMacro1" text="Macro 1">
@@ -247,7 +253,7 @@
       </TabPane>
       <HBox prefHeight="0.0" prefWidth="600.0">
          <children>
-            <Label fx:id="status_line" text="Label" HBox.hgrow="ALWAYS">
+            <Label fx:id="statusLine" text="Label" HBox.hgrow="ALWAYS">
                <HBox.margin>
                   <Insets bottom="2.0" left="5.0" top="2.0" />
                </HBox.margin></Label>
