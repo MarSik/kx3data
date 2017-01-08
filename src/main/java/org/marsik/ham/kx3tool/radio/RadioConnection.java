@@ -21,8 +21,10 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class RadioConnection {
     private static final Logger logger = LoggerFactory.getLogger(RadioConnection.class);
-    private static final int DATA_POLL_DELAY_MS = 1000;
-    private static final int TX_POLL_DELAY_MS = 250;
+    private static final int DATA_POLL_DELAY_MS = 1500;
+    private static final int TX_POLL_DELAY_MS = 500;
+    private static final int SAFETY_POLL_DELAY = 250;
+    private static final String EOT = "\04"; // Ctrl-D, End of Transmission
 
     @Inject
     SerialUtil serialUtil;
@@ -38,6 +40,16 @@ public class RadioConnection {
     Map<DataPushedFromQueue, Void> dataTransmittedListeners = new HashMap<>();
 
     Timer receiveDataTimer = new Timer("Radio data poller", true);
+    ReceiveDataTimerTask receiveDataTimerTask;
+
+    private void clearReceiveTimer() {
+        if (receiveDataTimerTask != null) {
+            logger.debug("Clearing data receive timer.");
+            receiveDataTimerTask.cancel();
+            receiveDataTimer.purge();
+            receiveDataTimerTask = null;
+        }
+    }
 
     private SerialConnection serialPort;
 
@@ -163,6 +175,7 @@ public class RadioConnection {
                  final int readyCount = serialPort.readyCount();
                  if (readyCount < (6 + rxReady)) {
                      logger.debug(".. Data block not ready (ready {}, needed {})", readyCount, 6 + rxReady);
+                     askForData(SAFETY_POLL_DELAY);
                      return;
                  }
 
@@ -177,6 +190,14 @@ public class RadioConnection {
                  resp = resp.substring(5);
                  resp = resp.substring(0, resp.length() - 1);
 
+                 if (!resp.isEmpty()) {
+                     for (AdditionalDataEvent listener : rxDataListeners.keySet()) {
+                         listener.add(resp);
+                     }
+                 }
+
+                 // Poll more often when the transmission is in progress, we only
+                 // want to keep up-to 9 chars in the radio tx buffer
                  askForData(txPending > 0 ? TX_POLL_DELAY_MS : DATA_POLL_DELAY_MS);
 
                  // Compute how many characters were actually sent
@@ -189,15 +210,13 @@ public class RadioConnection {
                  }
 
                  if (txPending < 9) {
-                     sendDataFromBuffer(9 - txPending);
+                     // It is possible to terminate transmission if the last transmission sent data
+                     // and there is nothing left to send
+                     sendDataFromBuffer(9 - txPending, pushed > 0);
                  }
-
-                 // No new data received
-                 if (resp.isEmpty()) continue;
-
-                 for (AdditionalDataEvent listener: rxDataListeners.keySet()) {
-                     listener.add(resp);
-                 }
+             } else if (serialPort.startsWith("?;")) {
+                 logger.warn("The last command was not available in the current mode.");
+                 readSimpleResponse();
              } else {
                  // Consume and drop the next message
                  String resp = readSimpleResponse();
@@ -260,10 +279,17 @@ public class RadioConnection {
         void pushed(int count);
     }
 
+
+    /**
+     * Replace (!) the scheduled data poll timer with a new one.
+     * @param delayMs The millisecond length of the new wait time period
+     *                starting 'now'.
+     */
     private void askForData(long delayMs) {
         logger.debug("Asking for more data in {} ms", delayMs);
-        receiveDataTimer.purge();
-        receiveDataTimer.schedule(new ReceiveDataTimerTask(), delayMs);
+        clearReceiveTimer();
+        receiveDataTimerTask = new ReceiveDataTimerTask();
+        receiveDataTimer.schedule(receiveDataTimerTask, delayMs);
     }
 
     private class ReceiveDataTimerTask extends TimerTask {
@@ -273,8 +299,18 @@ public class RadioConnection {
         }
     }
 
-    private void sendDataFromBuffer(int count) {
+    /**
+     * Send data from txBuffer to radio for transmission.
+     *
+     * @param count Number of characters to queue for transmission
+     * @param cutoff Should the transmission be immediately terminated when there are no more
+     *               characters to transmit?
+     */
+    private void sendDataFromBuffer(int count, boolean cutoff) {
         if (txBuffer.isEmpty()) {
+            if (cutoff) {
+                sendCommand("KY " + EOT);
+            }
             return;
         }
 
@@ -302,6 +338,6 @@ public class RadioConnection {
         }
 
         processReceivedData();
-        sendDataFromBuffer(9 - lastRadioTxBufferSize);
+        sendDataFromBuffer(9 - lastRadioTxBufferSize, false);
     }
 }

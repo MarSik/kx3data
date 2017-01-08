@@ -3,7 +3,6 @@ package org.marsik.ham.kx3tool.serial;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
@@ -41,16 +40,19 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
 
     @Override
     public void serialEvent(SerialPortEvent event) {
-        logger.debug("SerialEvent rx {}: {}", event.isRXCHAR(), event.getEventValue());
+        logger.debug("SerialEvent rx: {} len: {}", event.isRXCHAR(), event.getEventValue());
 
         if (event.isRXCHAR() && event.getEventValue() > 0) {
             try {
-                final String data = new String(port.readBytes(), "US-ASCII");
+                final byte[] readBytes = port.readBytes();
+                final String data = new String(readBytes, "US-ASCII");
+                logger.debug("Received: {} '{}'", readBytes, data);
+
                 assert data.length() >= event.getEventValue();
 
-                logger.debug("Received: {}", data);
                 synchronized (this) {
                     serialBuffer = serialBuffer + data;
+                    logger.debug("Serial rx buffer: '{}'", serialBuffer);
                 }
             } catch (SerialPortException e) {
                 e.printStackTrace();
