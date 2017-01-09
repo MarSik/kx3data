@@ -72,6 +72,7 @@ public class RadioConnection {
     public void sendCommand(String cmd) {
         try {
             if (serialPort != null) {
+                logger.debug("Sent: '{}'", cmd);
                 serialPort.write(cmd);
             }
         } catch (SerialPortException e) {

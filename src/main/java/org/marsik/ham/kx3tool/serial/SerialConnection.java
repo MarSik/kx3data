@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 public class SerialConnection implements SerialPortEventListener, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SerialConnection.class);
 
+    private static class Data {}
+    private static final Logger dataLogger = LoggerFactory.getLogger(Data.class);
+
     private final SerialPort port;
     private String serialBuffer = "";
     private final String portName;
@@ -46,7 +49,7 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
             try {
                 final byte[] readBytes = port.readBytes();
                 final String data = new String(readBytes, "US-ASCII");
-                logger.debug("Received: {} '{}'", readBytes, data);
+                dataLogger.debug("Received: '{}' {}", data, readBytes);
 
                 assert data.length() >= event.getEventValue();
 
@@ -109,8 +112,8 @@ public class SerialConnection implements SerialPortEventListener, AutoCloseable 
     }
 
     public void write(String data) throws SerialPortException {
+        dataLogger.debug("Sent: {}", data);
         port.writeString(data);
-        logger.debug("Sent: {}", data);
     }
 
     @Override
