@@ -31,8 +31,12 @@ public class EditMacroController implements Initializable {
     }
 
     public void onOkPressed(MouseEvent event) {
-        ok = true;
-        close((Node)event.getSource());
+        ok = !macroName.getText().isEmpty();
+        if (ok) {
+            close((Node) event.getSource());
+        } else {
+            macroName.requestFocus();
+        }
     }
 
     public void onCancelPressed(MouseEvent event) {

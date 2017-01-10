@@ -127,6 +127,10 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
         vnaDisconnect.setDisable(true);
         atuConnect.setDisable(false);
         atuDisconnect.setDisable(true);
+        dataSend.setDisable(true);
+
+        txInProgress.managedProperty().bind(txInProgress.visibleProperty());
+        txInProgress.setVisible(false);
 
         //dataSend.setDisable(true);
         rigBaudRate.getItems().addAll(serialUtil.getAvailableBaudRates());
@@ -199,7 +203,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
         @Override
         public void handle(MouseEvent event) {
-            appendKeepSelection(txBuffer, configuration.getMacro(id).getValue());
+            appendKeepSelection(dataTx, configuration.getMacro(id).getValue());
         }
     }
 
@@ -268,6 +272,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
             rigDisconnect.setDisable(false);
             refreshSerialPortList(atuSerialPort);
             refreshSerialPortList(vnaSerialPort);
+            dataSend.setDisable(false);
         } catch (SerialPortException ex) {
             ex.printStackTrace();
         }
@@ -282,6 +287,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
             rigDisconnect.setDisable(true);
             refreshSerialPortList(atuSerialPort);
             refreshSerialPortList(vnaSerialPort);
+            dataSend.setDisable(true);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -295,71 +301,6 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
     public void onTxClear(MouseEvent event) {
         dataTx.clear();
-    }
-
-
-    public void onSetMacro1(MouseEvent event) {
-
-    }
-
-    public void onMacro1(MouseEvent event) {
-
-    }
-
-    public void onSetMacro2(MouseEvent event) {
-
-    }
-
-    public void onMacro2(MouseEvent event) {
-
-    }
-
-    public void onSetMacro3(MouseEvent event) {
-
-    }
-
-    public void onMacro3(MouseEvent event) {
-
-    }
-
-    public void onSetMacro4(MouseEvent event) {
-
-    }
-
-    public void onMacro4(MouseEvent event) {
-
-    }
-
-    public void onSetMacro5(MouseEvent event) {
-
-    }
-
-    public void onMacro5(MouseEvent event) {
-
-    }
-
-    public void onSetMacro6(MouseEvent event) {
-
-    }
-
-    public void onMacro6(MouseEvent event) {
-
-    }
-
-    public void onSetMacro7(MouseEvent event) {
-
-    }
-
-    public void onMacro7(MouseEvent event) {
-
-    }
-
-    public void onSetMacro8(MouseEvent event) {
-
-    }
-
-    public void onMacro8(MouseEvent event) {
-
     }
 
     @Override

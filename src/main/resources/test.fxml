@@ -5,6 +5,7 @@
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
@@ -174,73 +175,85 @@
             </Tab>
             <Tab text="Data">
               <content>
-                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                <AnchorPane minHeight="0.0" minWidth="0.0">
                      <children>
-                        <VBox layoutX="250.0" layoutY="68.0" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0">
-                           <children>
-                              <TextArea fx:id="dataRx" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
-                              <HBox fx:id="txInProgress" prefHeight="100.0" prefWidth="200.0">
+                        <SplitPane dividerPositions="0.5" orientation="VERTICAL" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                          <items>
+                              <VBox prefHeight="84.0" prefWidth="259.0">
                                  <children>
-                                    <TextArea fx:id="txBuffer" editable="false" prefHeight="200.0" prefWidth="200.0" wrapText="true" HBox.hgrow="ALWAYS" />
-                                    <Button fx:id="abortTx" mnemonicParsing="false" text="Abort" />
+                                    <HBox fx:id="txInProgress" prefHeight="20.0" VBox.vgrow="NEVER">
+                                       <children>
+                                          <TextArea fx:id="txBuffer" editable="false" focusTraversable="false" prefHeight="19.0" prefWidth="539.0" wrapText="true" HBox.hgrow="ALWAYS" />
+                                          <Button fx:id="abortTx" mnemonicParsing="false" text="Abort">
+                                             <HBox.margin>
+                                                <Insets left="5.0" />
+                                             </HBox.margin></Button>
+                                       </children>
+                                    </HBox>
+                                    <TextArea fx:id="dataRx" editable="false" focusTraversable="false" wrapText="true" VBox.vgrow="ALWAYS" />
                                  </children>
-                              </HBox>
-                              <FlowPane prefHeight="64.0" prefWidth="590.0" VBox.vgrow="NEVER">
+                              </VBox>
+                              <VBox>
                                  <children>
-                                    <Button fx:id="macro1" mnemonicParsing="false" onContextMenuRequested="#onSetMacro1" onMouseClicked="#onMacro1" text="Macro 1">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro2" mnemonicParsing="false" onContextMenuRequested="#onSetMacro2" onMouseClicked="#onMacro2" text="Macro 2">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro3" mnemonicParsing="false" onContextMenuRequested="#onSetMacro3" onMouseClicked="#onMacro3" text="Macro 3">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro4" mnemonicParsing="false" onContextMenuRequested="#onSetMacro4" onMouseClicked="#onMacro4" text="Macro 4">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro5" mnemonicParsing="false" onContextMenuRequested="#onSetMacro5" onMouseClicked="#onMacro5" text="Macro 5">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro6" mnemonicParsing="false" onContextMenuRequested="#onSetMacro6" onMouseClicked="#onMacro6" text="Macro 6">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro7" mnemonicParsing="false" onContextMenuRequested="#onSetMacro7" onMouseClicked="#onMacro7" text="Macro 7">
-                                       <FlowPane.margin>
-                                          <Insets right="5.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="macro8" mnemonicParsing="false" onContextMenuRequested="#onSetMacro8" onMouseClicked="#onMacro8" text="Macro 8" />
+                                    <TextArea fx:id="dataTx" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
+                                    <HBox VBox.vgrow="NEVER">
+                                       <children>
+                                          <FlowPane prefWidth="2000.0" vgap="5.0" HBox.hgrow="ALWAYS">
+                                             <children>
+                                                <Button fx:id="macro1" mnemonicParsing="false" text="Macro 1">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro2" mnemonicParsing="false" text="Macro 2">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro3" mnemonicParsing="false" text="Macro 3">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro4" mnemonicParsing="false" text="Macro 4">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro5" mnemonicParsing="false" text="Macro 5">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro6" mnemonicParsing="false" text="Macro 6">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro7" mnemonicParsing="false" text="Macro 7">
+                                                   <FlowPane.margin>
+                                                      <Insets right="5.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="macro8" mnemonicParsing="false" text="Macro 8" />
+                                             </children>
+                                          </FlowPane>
+                                          <FlowPane alignment="BOTTOM_RIGHT" minWidth="120.0" HBox.hgrow="NEVER">
+                                             <children>
+                                                <Button mnemonicParsing="false" onMouseClicked="#onTxClear" text="Clear">
+                                                   <FlowPane.margin>
+                                                      <Insets right="10.0" />
+                                                   </FlowPane.margin>
+                                                </Button>
+                                                <Button fx:id="dataSend" defaultButton="true" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
+                                             </children>
+                                          </FlowPane>
+                                       </children>
+                                    </HBox>
                                  </children>
-                                 <VBox.margin>
-                                    <Insets bottom="2.0" top="2.0" />
-                                 </VBox.margin>
-                              </FlowPane>
-                              <TextArea fx:id="dataTx" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
-                              <FlowPane alignment="BOTTOM_RIGHT" prefHeight="44.0" prefWidth="590.0" VBox.vgrow="NEVER">
-                                 <children>
-                                    <Button mnemonicParsing="false" onMouseClicked="#onTxClear" text="Clear">
-                                       <FlowPane.margin>
-                                          <Insets right="10.0" />
-                                       </FlowPane.margin>
-                                    </Button>
-                                    <Button fx:id="dataSend" defaultButton="true" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
-                                 </children>
-                              </FlowPane>
-                           </children>
-                        </VBox>
+                              </VBox>
+                          </items>
+                        </SplitPane>
                      </children></AnchorPane>
               </content>
             </Tab>
