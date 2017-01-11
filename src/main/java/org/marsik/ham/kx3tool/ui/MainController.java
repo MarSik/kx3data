@@ -17,12 +17,15 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexRange;
@@ -82,6 +85,8 @@ public class MainController implements Initializable {
     @FXML private Button macro6;
     @FXML private Button macro7;
     @FXML private Button macro8;
+
+    @FXML private CheckBox autoScrollCheckBox;
 
     @Inject
     private Configuration configuration;
@@ -149,47 +154,47 @@ public class MainController implements Initializable {
             }
         }, 0, 1000);
 
-        updateMacroButton(macro1, configuration.getMacro(1));
+        updateMacroButton(1, macro1, configuration.getMacro(1));
         macro1.setOnAction(new MacroButtonClicked(1));
         macro1.setOnContextMenuRequested(new MacroButtonConfigureEvent(1));
         addButtonAccelerator(macro1, new KeyCodeCombination(KeyCode.F1));
 
-        updateMacroButton(macro2, configuration.getMacro(2));
+        updateMacroButton(2, macro2, configuration.getMacro(2));
         macro2.setOnAction(new MacroButtonClicked(2));
         macro2.setOnContextMenuRequested(new MacroButtonConfigureEvent(2));
         addButtonAccelerator(macro2, new KeyCodeCombination(KeyCode.F2));
 
-        updateMacroButton(macro3, configuration.getMacro(3));
+        updateMacroButton(3, macro3, configuration.getMacro(3));
         macro3.setOnAction(new MacroButtonClicked(3));
         macro3.setOnContextMenuRequested(new MacroButtonConfigureEvent(3));
         addButtonAccelerator(macro3, new KeyCodeCombination(KeyCode.F3));
 
-        updateMacroButton(macro4, configuration.getMacro(4));
+        updateMacroButton(4, macro4, configuration.getMacro(4));
         macro4.setOnAction(new MacroButtonClicked(4));
         macro4.setOnContextMenuRequested(new MacroButtonConfigureEvent(4));
         addButtonAccelerator(macro4, new KeyCodeCombination(KeyCode.F4));
 
-        updateMacroButton(macro5, configuration.getMacro(5));
+        updateMacroButton(5, macro5, configuration.getMacro(5));
         macro5.setOnAction(new MacroButtonClicked(5));
         macro5.setOnContextMenuRequested(new MacroButtonConfigureEvent(5));
         addButtonAccelerator(macro5, new KeyCodeCombination(KeyCode.F5));
 
-        updateMacroButton(macro6, configuration.getMacro(6));
+        updateMacroButton(6, macro6, configuration.getMacro(6));
         macro6.setOnAction(new MacroButtonClicked(6));
         macro6.setOnContextMenuRequested(new MacroButtonConfigureEvent(6));
         addButtonAccelerator(macro6, new KeyCodeCombination(KeyCode.F6));
 
-        updateMacroButton(macro7, configuration.getMacro(7));
+        updateMacroButton(7, macro7, configuration.getMacro(7));
         macro7.setOnAction(new MacroButtonClicked(7));
         macro7.setOnContextMenuRequested(new MacroButtonConfigureEvent(7));
         addButtonAccelerator(macro7, new KeyCodeCombination(KeyCode.F7));
 
-        updateMacroButton(macro8, configuration.getMacro(8));
+        updateMacroButton(8, macro8, configuration.getMacro(8));
         macro8.setOnAction(new MacroButtonClicked(8));
         macro8.setOnContextMenuRequested(new MacroButtonConfigureEvent(8));
         addButtonAccelerator(macro8, new KeyCodeCombination(KeyCode.F8));
 
-        addButtonAccelerator(dataSend, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN));
+        addButtonAccelerator(dataSend, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN));
 
         radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
         radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
@@ -209,8 +214,8 @@ public class MainController implements Initializable {
         });
     }
 
-    private void updateMacroButton(Button button, Macro macro) {
-        button.setText(macro.getName());
+    private void updateMacroButton(int id, Button button, Macro macro) {
+        button.setText("[F" + id + "] " + macro.getName());
     }
 
     private class MacroButtonClicked implements EventHandler<ActionEvent> {
@@ -247,7 +252,7 @@ public class MainController implements Initializable {
             if (macroDialog.getController().isOk()) {
                 final Macro macro = macroDialog.getController().getValue();
                 configuration.setMacro(idx, macro);
-                ((Button) event.getSource()).setText(macro.getName());
+                updateMacroButton(idx, (Button) event.getSource(), macro);
             }
         }
     }
@@ -351,13 +356,16 @@ public class MainController implements Initializable {
 
     private void appendKeepSelection(TextArea area, String s) {
         IndexRange selected = area.getSelection();
-        int pos = area.getCaretPosition();
-        int len = area.getLength();
+        double scroll = area.getScrollTop();
 
         area.appendText(s);
 
         area.selectRange(selected.getStart(), selected.getEnd());
-        if (pos == len) area.positionCaret(pos);
+        if (autoScrollCheckBox.isSelected()) {
+            area.setScrollTop(Double.MAX_VALUE);
+        } else {
+            area.setScrollTop(scroll);
+        }
     }
 
     private String removeFromStartKeepSelection(TextArea area, String prefix) {
