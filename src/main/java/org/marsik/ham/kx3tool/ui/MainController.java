@@ -16,6 +16,7 @@ import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import io.reactivex.Observable;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -180,8 +181,8 @@ public class MainController implements Initializable {
         radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
         radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
         radioConnection.getTxTransmittedQueue().subscribe(c -> Platform.runLater(() -> {
-            String removed = removeFromStartKeepSelection(txBuffer, c.length());
-            appendKeepSelection(dataRx, removed);
+            removeFromStartKeepSelection(txBuffer, c);
+            appendKeepSelection(dataRx, c);
         }));
         radioConnection.getInfoQueue().subscribe(this::notify);
     }
@@ -328,13 +329,18 @@ public class MainController implements Initializable {
         if (pos == len) area.positionCaret(pos);
     }
 
-    private String removeFromStartKeepSelection(TextArea area, int count) {
-        // Meke sure this is executed from the right thread (UI)
+    private String removeFromStartKeepSelection(TextArea area, String prefix) {
         IndexRange selected = area.getSelection();
         int pos = area.getCaretPosition();
         int len = area.getLength();
 
         final String oldContent = area.getText();
+        int count = findEndPrefixMatch(prefix, oldContent);
+
+        if (count == 0) {
+            return "";
+        }
+
         String newContent = oldContent.substring(count);
         area.setText(newContent);
 
@@ -349,5 +355,26 @@ public class MainController implements Initializable {
         if (pos == len) area.positionCaret(pos);
 
         return oldContent.substring(0, count);
+    }
+
+    /**
+     * Find the substring that is a tail of prefix and a prefix for content
+     * and return its length.
+     *
+     * for example:
+     * Current    ABCDEFG
+     * Prefix  XYZABCD
+     * result -> EFG -> 3
+     */
+    static int findEndPrefixMatch(String prefix, String content) {
+        int count = prefix.length();
+        while (count > 0) {
+            if (!content.startsWith(prefix.substring(prefix.length() - count))) {
+                count--;
+            } else {
+                break;
+            }
+        }
+        return count;
     }
 }
