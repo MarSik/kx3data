@@ -17,6 +17,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -28,6 +29,9 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -146,36 +150,46 @@ public class MainController implements Initializable {
         }, 0, 1000);
 
         updateMacroButton(macro1, configuration.getMacro(1));
-        macro1.setOnMouseClicked(new MacroButtonClicked(1));
+        macro1.setOnAction(new MacroButtonClicked(1));
         macro1.setOnContextMenuRequested(new MacroButtonConfigureEvent(1));
+        addButtonAccelerator(macro1, new KeyCodeCombination(KeyCode.F1));
 
         updateMacroButton(macro2, configuration.getMacro(2));
-        macro2.setOnMouseClicked(new MacroButtonClicked(2));
+        macro2.setOnAction(new MacroButtonClicked(2));
         macro2.setOnContextMenuRequested(new MacroButtonConfigureEvent(2));
+        addButtonAccelerator(macro2, new KeyCodeCombination(KeyCode.F2));
 
         updateMacroButton(macro3, configuration.getMacro(3));
-        macro3.setOnMouseClicked(new MacroButtonClicked(3));
+        macro3.setOnAction(new MacroButtonClicked(3));
         macro3.setOnContextMenuRequested(new MacroButtonConfigureEvent(3));
+        addButtonAccelerator(macro3, new KeyCodeCombination(KeyCode.F3));
 
         updateMacroButton(macro4, configuration.getMacro(4));
-        macro4.setOnMouseClicked(new MacroButtonClicked(4));
+        macro4.setOnAction(new MacroButtonClicked(4));
         macro4.setOnContextMenuRequested(new MacroButtonConfigureEvent(4));
+        addButtonAccelerator(macro4, new KeyCodeCombination(KeyCode.F4));
 
         updateMacroButton(macro5, configuration.getMacro(5));
-        macro5.setOnMouseClicked(new MacroButtonClicked(5));
+        macro5.setOnAction(new MacroButtonClicked(5));
         macro5.setOnContextMenuRequested(new MacroButtonConfigureEvent(5));
+        addButtonAccelerator(macro5, new KeyCodeCombination(KeyCode.F5));
 
         updateMacroButton(macro6, configuration.getMacro(6));
-        macro6.setOnMouseClicked(new MacroButtonClicked(6));
+        macro6.setOnAction(new MacroButtonClicked(6));
         macro6.setOnContextMenuRequested(new MacroButtonConfigureEvent(6));
+        addButtonAccelerator(macro6, new KeyCodeCombination(KeyCode.F6));
 
         updateMacroButton(macro7, configuration.getMacro(7));
-        macro7.setOnMouseClicked(new MacroButtonClicked(7));
+        macro7.setOnAction(new MacroButtonClicked(7));
         macro7.setOnContextMenuRequested(new MacroButtonConfigureEvent(7));
+        addButtonAccelerator(macro7, new KeyCodeCombination(KeyCode.F7));
 
         updateMacroButton(macro8, configuration.getMacro(8));
-        macro8.setOnMouseClicked(new MacroButtonClicked(8));
+        macro8.setOnAction(new MacroButtonClicked(8));
         macro8.setOnContextMenuRequested(new MacroButtonConfigureEvent(8));
+        addButtonAccelerator(macro8, new KeyCodeCombination(KeyCode.F8));
+
+        addButtonAccelerator(dataSend, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN));
 
         radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
         radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
@@ -186,11 +200,17 @@ public class MainController implements Initializable {
         radioConnection.getInfoQueue().subscribe(this::notify);
     }
 
+    private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
+        Platform.runLater(() -> {
+            button.getScene().getAccelerators().put(accel, button::fire);
+        });
+    }
+
     private void updateMacroButton(Button button, Macro macro) {
         button.setText(macro.getName());
     }
 
-    private class MacroButtonClicked implements EventHandler<MouseEvent> {
+    private class MacroButtonClicked implements EventHandler<ActionEvent> {
         final int id;
 
         public MacroButtonClicked(int id) {
@@ -198,7 +218,7 @@ public class MainController implements Initializable {
         }
 
         @Override
-        public void handle(MouseEvent event) {
+        public void handle(ActionEvent event) {
             insertReplaceSelection(dataTx, configuration.getMacro(id).getValue());
             dataTx.requestFocus();
         }
@@ -254,7 +274,7 @@ public class MainController implements Initializable {
         }
     }
 
-    public void onRigConnect(MouseEvent event) {
+    public void onRigConnect(ActionEvent event) {
         try {
             radioConnection.open(rigSerialPort.getValue(), rigBaudRate.getValue());
             rigBaudRate.setDisable(true);
@@ -269,7 +289,7 @@ public class MainController implements Initializable {
         }
     }
 
-    public void onRigDisconnect(MouseEvent event) {
+    public void onRigDisconnect(ActionEvent event) {
         try {
             radioConnection.close();
             rigBaudRate.setDisable(false);
@@ -288,10 +308,12 @@ public class MainController implements Initializable {
         radioConnection.sendData(dataTx.getText());
         dataTx.clear();
         txInProgress.setVisible(true);
+        dataTx.requestFocus();
     }
 
     public void onTxClear(MouseEvent event) {
         dataTx.clear();
+        dataTx.requestFocus();
     }
 
     /**

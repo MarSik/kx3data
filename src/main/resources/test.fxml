@@ -70,12 +70,12 @@
                                     <ComboBox fx:id="rigSerialPort" editable="true" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
                                     <FlowPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="3">
                                        <children>
-                                          <Button fx:id="rigConnect" mnemonicParsing="false" onMouseClicked="#onRigConnect" text="Connect">
+                                          <Button fx:id="rigConnect" mnemonicParsing="false" onAction="#onRigConnect" text="Connect">
                                              <FlowPane.margin>
                                                 <Insets right="5.0" />
                                              </FlowPane.margin>
                                           </Button>
-                                          <Button fx:id="rigDisconnect" mnemonicParsing="false" onMouseClicked="#onRigDisconnect" text="Disconnect" />
+                                          <Button fx:id="rigDisconnect" mnemonicParsing="false" onAction="#onRigDisconnect" text="Disconnect" />
                                        </children>
                                     </FlowPane>
                                  </children>
@@ -240,12 +240,12 @@
                                           </FlowPane>
                                           <FlowPane alignment="BOTTOM_RIGHT" minWidth="120.0" HBox.hgrow="NEVER">
                                              <children>
-                                                <Button mnemonicParsing="false" onMouseClicked="#onTxClear" text="Clear">
+                                                <Button mnemonicParsing="false" onAction="#onTxClear" text="Clear">
                                                    <FlowPane.margin>
                                                       <Insets right="10.0" />
                                                    </FlowPane.margin>
                                                 </Button>
-                                                <Button fx:id="dataSend" defaultButton="true" mnemonicParsing="false" onMouseClicked="#onDataSend" text="Send" />
+                                                <Button fx:id="dataSend" defaultButton="true" mnemonicParsing="false" onAction="#onDataSend" text="Send" />
                                              </children>
                                           </FlowPane>
                                        </children>
