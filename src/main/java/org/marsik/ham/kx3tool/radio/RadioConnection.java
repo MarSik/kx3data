@@ -3,6 +3,7 @@ package org.marsik.ham.kx3tool.radio;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
@@ -13,6 +14,7 @@ import io.reactivex.subjects.PublishSubject;
 
 import jssc.SerialPortException;
 
+import org.apache.commons.math3.util.IntegerSequence;
 import org.marsik.ham.kx3tool.serial.SerialConnection;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 import org.slf4j.Logger;
@@ -230,7 +232,8 @@ public class RadioConnection {
                  // Compute how many characters were actually sent
                  int pushed = Math.max(lastRadioTxBufferSize - txPending, 0);
                  if (pushed > 0) {
-                     Observable.range(0, pushed).subscribe(txTransmittedMark);
+                     logger.debug("Succesfully transmitted {} chars", pushed);
+                     IntegerSequence.range(1, pushed).forEach(txTransmittedMark::onNext);
                      lastRadioTxBufferSize = txPending;
                  }
 
@@ -283,7 +286,7 @@ public class RadioConnection {
     private void sendDataFromBuffer(int count, boolean cutoff) {
         if (txBuffer.isEmpty()) {
             if (cutoff) {
-                sendCommand("KY " + EOT);
+                sendCommand("KY " + EOT + ";");
             }
             return;
         }
@@ -297,7 +300,7 @@ public class RadioConnection {
         txBuffer = txBuffer.substring(part.length());
         askForData(TX_POLL_DELAY_MS);
 
-        Observable.range(0, part.length()).subscribe(txSentToRadioMark);
+        IntegerSequence.range(1, part.length()).forEach(txSentToRadioMark::onNext);
         lastRadioTxBufferSize += part.length();
     }
 
@@ -310,7 +313,7 @@ public class RadioConnection {
     public void sendData(String data) {
         txBuffer = txBuffer + data;
 
-        data.codePoints().forEach(cp -> txQueue.onNext(String.valueOf(Character.toChars(cp))));
+        Arrays.asList(data.split("(?!^)")).forEach(txQueue::onNext);
 
         processReceivedData();
         sendDataFromBuffer(9 - lastRadioTxBufferSize, false);

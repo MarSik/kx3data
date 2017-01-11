@@ -196,6 +196,9 @@ public class MainController implements Initializable {
         radioConnection.getTxTransmittedQueue().subscribe(c -> Platform.runLater(() -> {
             removeFromStartKeepSelection(txBuffer, c);
             appendKeepSelection(dataRx, c);
+            if (txBuffer.getText().isEmpty()) {
+                txInProgress.setVisible(false);
+            }
         }));
         radioConnection.getInfoQueue().subscribe(this::notify);
     }
@@ -304,7 +307,7 @@ public class MainController implements Initializable {
         }
     }
 
-    public void onDataSend(MouseEvent event) {
+    public void onDataSend(ActionEvent event) {
         radioConnection.sendData(dataTx.getText());
         dataTx.clear();
         txInProgress.setVisible(true);
