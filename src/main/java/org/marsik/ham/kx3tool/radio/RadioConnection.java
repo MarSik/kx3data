@@ -3,21 +3,21 @@ package org.marsik.ham.kx3tool.radio;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
+
 import jssc.SerialPortException;
-import lombok.Data;
+
 import org.marsik.ham.kx3tool.serial.SerialConnection;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Data
 @Singleton
 public class RadioConnection {
     private static final Logger logger = LoggerFactory.getLogger(RadioConnection.class);
@@ -27,20 +27,49 @@ public class RadioConnection {
     private static final String EOT = "\04"; // Ctrl-D, End of Transmission
 
     @Inject
-    SerialUtil serialUtil;
+    private SerialUtil serialUtil;
 
     @Inject
-    RadioInfo info;
+    private RadioInfo info;
 
-    Map<InfoUpdated, Void> listeners = new HashMap<>();
-    Map<AdditionalDataEvent, Void> rxDataListeners = new HashMap<>();
-    Map<AdditionalDataEvent, Void> queuedDataListeners = new HashMap<>();
+    /**
+     * This publisher emits all received data
+     */
+    private PublishSubject<String> rxQueue = PublishSubject.create();
 
-    Map<DataPushedFromQueue, Void> dataSentListeners = new HashMap<>();
-    Map<DataPushedFromQueue, Void> dataTransmittedListeners = new HashMap<>();
+    /**
+     * This publisher emits all data that are to be sent. The data are fed through it
+     * once the user presses the Send button.
+     */
+    private PublishSubject<String> txQueue = PublishSubject.create();
 
-    Timer receiveDataTimer = new Timer("Radio data poller", true);
-    ReceiveDataTimerTask receiveDataTimerTask;
+    /**
+     * All radio updates like frequency change or mode change are published here.
+     */
+    private PublishSubject<RadioInfo> infoQueue = PublishSubject.create();
+
+    /**
+     * A trigger for pushing one character from txQueue to txSentToRadio
+     */
+    private PublishSubject<Integer> txSentToRadioMark = PublishSubject.create();
+
+    /**
+     * A trigger for pushing one character from txSentToRadio to txTransmitted
+     */
+    private PublishSubject<Integer> txTransmittedMark = PublishSubject.create();
+
+    /**
+     * A queue of all characters that were sent to radio for transmit
+     */
+    private Observable<String> txSentToRadio = Observable.zip(txQueue, txSentToRadioMark, (a,b) -> a);
+
+    /**
+     * A queue of all characters that were sucessfully transmitted.
+     */
+    private Observable<String> txTransmitted = Observable.zip(txSentToRadio, txTransmittedMark, (a,b) -> a);
+
+    private Timer receiveDataTimer = new Timer("Radio data poller", true);
+    private ReceiveDataTimerTask receiveDataTimerTask;
 
     private void clearReceiveTimer() {
         if (receiveDataTimerTask != null) {
@@ -98,14 +127,15 @@ public class RadioConnection {
 
                 sendCommand("OM;AI2;IF;"); // Prepare K3 specific mode
                 info.setRadioModel(RadioInfo.RadioModel.K3);
-                notifyListeners();
+                infoQueue.onNext(info);
                 askForData(0); // TODO Ask only in data modes?
             } else if (serialPort.startsWith("FA")) {
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
 
                 info.setFrequency(Long.parseLong(resp.substring(2, 13)));
-                notifyListeners();
+                infoQueue.onNext(info);
+
             } else if (serialPort.startsWith("IF")) { // TODO why isn't IF received periodically?
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
@@ -152,7 +182,7 @@ public class RadioConnection {
                                 break;
                         }
                 }
-                notifyListeners();
+                infoQueue.onNext(info);
             } else if (serialPort.startsWith("OM")) {
                 String resp = readSimpleResponse();
                 if (resp.isEmpty()) return;
@@ -160,7 +190,7 @@ public class RadioConnection {
                 if (resp.endsWith("02;")) {
                     info.setRadioModel(RadioInfo.RadioModel.KX3);
                     sendCommand("EL1;"); // Enable KX3 error reporting
-                    notifyListeners();
+                    infoQueue.onNext(info);
                 }
             } else if (serialPort.startsWith("TB")) {
                  logger.debug("Checking readiness of TB: '{}'", serialPort.peek(serialPort.readyCount()));
@@ -191,11 +221,7 @@ public class RadioConnection {
                  resp = resp.substring(5);
                  resp = resp.substring(0, resp.length() - 1);
 
-                 if (!resp.isEmpty()) {
-                     for (AdditionalDataEvent listener : rxDataListeners.keySet()) {
-                         listener.add(resp);
-                     }
-                 }
+                 rxQueue.onNext(resp);
 
                  // Poll more often when the transmission is in progress, we only
                  // want to keep up-to 9 chars in the radio tx buffer
@@ -204,9 +230,7 @@ public class RadioConnection {
                  // Compute how many characters were actually sent
                  int pushed = Math.max(lastRadioTxBufferSize - txPending, 0);
                  if (pushed > 0) {
-                     for (DataPushedFromQueue listener : dataTransmittedListeners.keySet()) {
-                         listener.pushed(pushed);
-                     }
+                     Observable.range(0, pushed).subscribe(txTransmittedMark);
                      lastRadioTxBufferSize = txPending;
                  }
 
@@ -229,57 +253,6 @@ public class RadioConnection {
     private String readSimpleResponse() {
         return serialPort.readUntilChar(';');
     }
-
-    public void addInfoUpdateListener(InfoUpdated listener) {
-        listeners.put(listener, null);
-    }
-
-    public void addReceivedDataListener(AdditionalDataEvent listener) {
-        rxDataListeners.put(listener, null);
-    }
-
-    public void addQueuedDataListener(AdditionalDataEvent listener) {
-        queuedDataListeners.put(listener, null);
-    }
-
-    public void addDataSentListener(DataPushedFromQueue listener) {
-        dataSentListeners.put(listener, null);
-    }
-
-    public void addDataTransmittedListener(DataPushedFromQueue listener) {
-        dataTransmittedListeners.put(listener, null);
-    }
-
-    public void notifyListeners() {
-        for (InfoUpdated listener: listeners.keySet()) {
-            listener.notify(info);
-        }
-    }
-
-    public interface InfoUpdated {
-        void notify(RadioInfo info);
-    }
-
-    /**
-     * Additional data received and decoded or sent to queue for transmit
-     */
-    public interface AdditionalDataEvent {
-        /**
-         * @param s The new chunk of data that was received
-         */
-        void add(String s);
-    }
-
-    /**
-     * Data from queue sent to radio or transmitted
-     */
-    public interface DataPushedFromQueue {
-        /**
-         * @param count Number of characters pushed to the next stage
-         */
-        void pushed(int count);
-    }
-
 
     /**
      * Replace (!) the scheduled data poll timer with a new one.
@@ -324,21 +297,42 @@ public class RadioConnection {
         txBuffer = txBuffer.substring(part.length());
         askForData(TX_POLL_DELAY_MS);
 
-        for (DataPushedFromQueue listener: dataSentListeners.keySet()) {
-            listener.pushed(part.length());
-        }
-
+        Observable.range(0, part.length()).subscribe(txSentToRadioMark);
         lastRadioTxBufferSize += part.length();
     }
 
+    /**
+     * Start new transmission, send some data to radio and store the rest
+     * in the txBuffer
+     *
+     * @param data
+     */
     public void sendData(String data) {
         txBuffer = txBuffer + data;
 
-        for (AdditionalDataEvent listener: queuedDataListeners.keySet()) {
-            listener.add(data);
-        }
+        data.codePoints().forEach(cp -> txQueue.onNext(String.valueOf(Character.toChars(cp))));
 
         processReceivedData();
         sendDataFromBuffer(9 - lastRadioTxBufferSize, false);
+    }
+
+    public Observable<String> getRxQueue() {
+        return rxQueue.hide();
+    }
+
+    public Observable<String> getTxQueue() {
+        return txQueue.hide();
+    }
+
+    public Observable<RadioInfo> getInfoQueue() {
+        return infoQueue.hide();
+    }
+
+    public Observable<String> getTxSentToRadioQueue() {
+        return txSentToRadio.hide();
+    }
+
+    public Observable<String> getTxTransmittedQueue() {
+        return txTransmitted.hide();
     }
 }

@@ -39,7 +39,7 @@ import org.marsik.ham.kx3tool.radio.RadioConnection;
 import org.marsik.ham.kx3tool.radio.RadioInfo;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 
-public class MainController implements Initializable, RadioConnection.InfoUpdated {
+public class MainController implements Initializable {
     @FXML private VBox root;
 
     @FXML private Button dataSend;
@@ -108,19 +108,7 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
     private Timer clockTimer = new Timer("Clock timer", true);
 
-    private RadioConnection.AdditionalDataEvent dataReceived;
-    private RadioConnection.AdditionalDataEvent dataQueued;
-    private RadioConnection.DataPushedFromQueue dataSent = count -> {};
-    private RadioConnection.DataPushedFromQueue dataTransmitted;
-
     public void initialize(URL location, ResourceBundle resources) {
-        dataReceived = s -> Platform.runLater(() -> appendKeepSelection(dataRx, s));
-        dataQueued = s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s));
-        dataTransmitted = c -> Platform.runLater(() -> {
-            String removed = removeFromStartKeepSelection(txBuffer, c);
-            appendKeepSelection(dataRx, removed);
-        });
-
         rigConnect.setDisable(false);
         rigDisconnect.setDisable(true);
         vnaConnect.setDisable(false);
@@ -188,6 +176,14 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
         updateMacroButton(macro8, configuration.getMacro(8));
         macro8.setOnMouseClicked(new MacroButtonClicked(8));
         macro8.setOnContextMenuRequested(new MacroButtonConfigureEvent(8));
+
+        radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
+        radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
+        radioConnection.getTxTransmittedQueue().subscribe(c -> Platform.runLater(() -> {
+            String removed = removeFromStartKeepSelection(txBuffer, c.length());
+            appendKeepSelection(dataRx, removed);
+        }));
+        radioConnection.getInfoQueue().subscribe(this::notify);
     }
 
     private void updateMacroButton(Button button, Macro macro) {
@@ -259,12 +255,6 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
 
     public void onRigConnect(MouseEvent event) {
         try {
-            radioConnection.addInfoUpdateListener(this);
-            radioConnection.addReceivedDataListener(dataReceived);
-            radioConnection.addQueuedDataListener(dataQueued);
-            radioConnection.addDataSentListener(dataSent);
-            radioConnection.addDataTransmittedListener(dataTransmitted);
-
             radioConnection.open(rigSerialPort.getValue(), rigBaudRate.getValue());
             rigBaudRate.setDisable(true);
             rigSerialPort.setDisable(true);
@@ -303,8 +293,11 @@ public class MainController implements Initializable, RadioConnection.InfoUpdate
         dataTx.clear();
     }
 
-    @Override
-    public void notify(RadioInfo info) {
+    /**
+     * Update radio status
+     * @param info
+     */
+    private void notify(RadioInfo info) {
         TimeZone utc = TimeZone.getTimeZone("UTC");
         LocalTime now = LocalTime.now(utc.toZoneId());
 
