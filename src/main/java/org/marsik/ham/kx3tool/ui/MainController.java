@@ -16,7 +16,6 @@ import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import io.reactivex.Observable;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -200,7 +199,8 @@ public class MainController implements Initializable {
 
         @Override
         public void handle(MouseEvent event) {
-            appendKeepSelection(dataTx, configuration.getMacro(id).getValue());
+            insertReplaceSelection(dataTx, configuration.getMacro(id).getValue());
+            dataTx.requestFocus();
         }
     }
 
@@ -316,6 +316,12 @@ public class MainController implements Initializable {
         final String finalRadioText = radioText;
         Platform.runLater(() -> radioLine.setText(finalRadioText));
         Platform.runLater(() -> statusLine.setText(statusText));
+    }
+
+    private void insertReplaceSelection(TextArea area, String s) {
+        IndexRange selected = area.getSelection();
+        area.replaceSelection(s);
+        area.positionCaret(selected.getStart() + s.length());
     }
 
     private void appendKeepSelection(TextArea area, String s) {
