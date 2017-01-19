@@ -5,6 +5,11 @@ import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 
 import javax.inject.Inject;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.Port;
 import java.net.URL;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -15,10 +20,11 @@ import java.util.ResourceBundle;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Executor;
 
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -39,7 +45,9 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import jssc.SerialPortException;
+import org.marsik.ham.kx3tool.audio.AudioCapture;
 import org.marsik.ham.kx3tool.configuration.Configuration;
 import org.marsik.ham.kx3tool.configuration.Macro;
 import org.marsik.ham.kx3tool.radio.RadioConnection;
@@ -88,8 +96,20 @@ public class MainController implements Initializable {
 
     @FXML private CheckBox autoScrollCheckBox;
 
+    @FXML private ChoiceBox<Mixer.Info> audioDevice;
+    @FXML private ChoiceBox<DataLine.Info> inputDac;
+    @FXML private Label inputDacLabel;
+
+    @FXML private Button startAudio;
+    @FXML private Button stopAudio;
+
     @Inject
     private Configuration configuration;
+
+    @Inject
+    private Executor executor;
+
+    private AudioCapture audioCapture;
 
     private static final DateTimeFormatter SIMPLE_LOCAL_TIME;
     static {
@@ -206,6 +226,40 @@ public class MainController implements Initializable {
             }
         }));
         radioConnection.getInfoQueue().subscribe(this::notify);
+
+        final List<Mixer.Info> availableDevices = AudioCapture.getAvailableDevices();
+        audioDevice.setConverter(new StringConverter<Mixer.Info>() {
+            @Override
+            public String toString(Mixer.Info object) {
+                return object.getDescription();
+            }
+
+            @Override
+            public Mixer.Info fromString(String string) {
+                return null;
+            }
+        });
+
+
+        audioDevice.getItems().addAll(availableDevices);
+        inputDacLabel.visibleProperty().bind(inputDac.visibleProperty());
+
+        audioDevice.valueProperty().addListener(new ChangeListener<Mixer.Info>() {
+            @Override
+            public void changed(ObservableValue<? extends Mixer.Info> observable, Mixer.Info oldValue, Mixer.Info newValue) {
+                final List<DataLine.Info> inputLines = AudioCapture.getInputLines(newValue);
+                inputDac.setVisible(inputLines.size() > 1);
+                inputDac.getItems().clear();
+                inputDac.getItems().addAll(inputLines);
+                inputDac.setValue(inputLines.get(0));
+            }
+        });
+
+        audioDevice.setValue(availableDevices.get(0));
+        audioDevice.disableProperty().bind(startAudio.disabledProperty());
+
+        inputDac.disableProperty().bind(startAudio.disabledProperty());
+        stopAudio.disableProperty().bind(startAudio.disabledProperty().not());
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
@@ -319,7 +373,7 @@ public class MainController implements Initializable {
         dataTx.requestFocus();
     }
 
-    public void onTxClear(MouseEvent event) {
+    public void onTxClear(ActionEvent event) {
         dataTx.clear();
         dataTx.requestFocus();
     }
@@ -415,5 +469,23 @@ public class MainController implements Initializable {
             }
         }
         return count;
+    }
+
+    public void onStartAudio(ActionEvent event) {
+        try {
+            audioCapture = new AudioCapture(audioDevice.getValue(), inputDac.getValue(), executor);
+            startAudio.setDisable(true);
+            audioCapture.open();
+            audioCapture.start();
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void onStopAudio() {
+        audioCapture.stop();
+        audioCapture.close();
+        audioCapture = null;
+        startAudio.setDisable(false);
     }
 }
