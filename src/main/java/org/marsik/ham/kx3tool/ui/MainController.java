@@ -6,10 +6,8 @@ import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 
 import javax.inject.Inject;
 import javax.sound.sampled.DataLine;
-import javax.sound.sampled.Line;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
-import javax.sound.sampled.Port;
 import java.net.URL;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -18,9 +16,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -41,13 +39,14 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import jssc.SerialPortException;
 import org.marsik.ham.kx3tool.audio.AudioCapture;
+import org.marsik.ham.kx3tool.cdi.JobExecutor;
+import org.marsik.ham.kx3tool.cdi.Timer;
 import org.marsik.ham.kx3tool.configuration.Configuration;
 import org.marsik.ham.kx3tool.configuration.Macro;
 import org.marsik.ham.kx3tool.radio.RadioConnection;
@@ -106,8 +105,8 @@ public class MainController implements Initializable {
     @Inject
     private Configuration configuration;
 
-    @Inject
-    private Executor executor;
+    @Inject @JobExecutor
+    private ExecutorService executor;
 
     private AudioCapture audioCapture;
 
@@ -135,7 +134,8 @@ public class MainController implements Initializable {
     @Inject
     private DialogLoader dialogLoader;
 
-    private Timer clockTimer = new Timer("Clock timer", true);
+    @Inject @Timer
+    private ScheduledExecutorService scheduler;
 
     public void initialize(URL location, ResourceBundle resources) {
         rigConnect.setDisable(false);
@@ -167,12 +167,8 @@ public class MainController implements Initializable {
         refreshSerialPortList(vnaSerialPort);
 
         // Start clock
-        clockTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                MainController.this.notify(radioInfo);
-            }
-        }, 0, 1000);
+        scheduler.scheduleAtFixedRate(() -> notify(radioInfo),
+                0, 1, TimeUnit.SECONDS);
 
         updateMacroButton(1, macro1, configuration.getMacro(1));
         macro1.setOnAction(new MacroButtonClicked(1));

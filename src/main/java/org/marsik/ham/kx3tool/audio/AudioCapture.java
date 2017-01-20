@@ -10,15 +10,16 @@ import javax.sound.sampled.TargetDataLine;
 import java.nio.Buffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import org.apache.commons.math3.complex.Complex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AudioCapture implements AutoCloseable, Runnable {
+public class AudioCapture implements AutoCloseable, Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(AudioCapture.class);
     public static final int FFT_SIZE = 1024;
     public final int FFT_RATE = 30;
@@ -30,14 +31,14 @@ public class AudioCapture implements AutoCloseable, Runnable {
     private final AudioFormat format;
     private Buffer dataWrapper;
 
-    private final Executor executor;
-    private final AtomicBoolean captureRunning = new AtomicBoolean(false);
+    private final ExecutorService executor;
+    private Future<?> captureRunning;
 
     private final FrequencyAnalyzer frequencyAnalyzer;
     private final IQReader.IQSample iqSampler;
     private final IQReader iqReader;
 
-    public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, Executor executor) throws LineUnavailableException {
+    public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, ExecutorService executor) throws LineUnavailableException {
         this.executor = executor;
 
         mixer = AudioSystem.getMixer(mixerInfo);
@@ -79,12 +80,11 @@ public class AudioCapture implements AutoCloseable, Runnable {
 
     public void start() {
         // Start the thread
-        captureRunning.set(true);
-        executor.execute(this);
+        captureRunning = executor.submit(this);
     }
 
     public void stop() {
-        captureRunning.set(false);
+        captureRunning.cancel(true);
     }
 
     public void close() {
@@ -92,23 +92,20 @@ public class AudioCapture implements AutoCloseable, Runnable {
     }
 
     public static List<Mixer.Info> getAvailableDevices() {
-        return Arrays.asList(AudioSystem.getMixerInfo())
-                .stream()
+        return Arrays.stream(AudioSystem.getMixerInfo())
                 .filter(info -> !getInputLines(info).isEmpty())
                 .collect(Collectors.toList());
     }
 
     public static List<DataLine.Info> getInputLines(Mixer.Info mixer) {
-        return Arrays.asList(AudioSystem.getMixer(mixer).getTargetLineInfo())
-                .stream()
+        return Arrays.stream(AudioSystem.getMixer(mixer).getTargetLineInfo())
                 .filter(info -> DataLine.class.isAssignableFrom(info.getLineClass()))
                 .map(line -> (DataLine.Info) line)
                 .collect(Collectors.toList());
     }
 
     public static List<Port.Info> getInputPorts(Mixer.Info mixer) {
-        return Arrays.asList(AudioSystem.getMixer(mixer).getTargetLineInfo())
-                .stream()
+        return Arrays.stream(AudioSystem.getMixer(mixer).getTargetLineInfo())
                 .filter(info -> Port.class.isAssignableFrom(info.getLineClass()))
                 .map(line -> (Port.Info) line)
                 .collect(Collectors.toList());
@@ -123,12 +120,13 @@ public class AudioCapture implements AutoCloseable, Runnable {
      * and the start() method starts it in a separate thread.
      */
     @Override
-    public void run() {
+    public Void call() throws Exception {
+        logger.debug("Audio capture starting.");
         line.start();
         logger.debug("Audio capture started.");
 
         int received = 0;
-        while (captureRunning.get()) {
+        while (!Thread.currentThread().isInterrupted()) {
             final int read = line.read(data, received, data.length - received);
             logger.trace("Received {} bytes of audio", read);
 
@@ -137,7 +135,7 @@ public class AudioCapture implements AutoCloseable, Runnable {
                 received = 0;
 
                 // prepare data for FFT
-                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, 0, FFT_SIZE));
+                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, 0, FFT_SIZE * format.getFrameSize()));
                 Complex[] freqData = frequencyAnalyzer.analyze(iqData);
                 logger.debug("Frequency data: {}", (Object[]) freqData);
             }
@@ -145,5 +143,7 @@ public class AudioCapture implements AutoCloseable, Runnable {
 
         line.stop();
         logger.debug("Audio capture stopped.");
+
+        return null;
     }
 }

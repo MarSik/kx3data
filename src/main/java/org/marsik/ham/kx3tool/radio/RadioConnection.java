@@ -4,8 +4,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import java.util.Arrays;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,6 +16,7 @@ import io.reactivex.subjects.PublishSubject;
 import jssc.SerialPortException;
 
 import org.apache.commons.math3.util.IntegerSequence;
+import org.marsik.ham.kx3tool.cdi.Timer;
 import org.marsik.ham.kx3tool.serial.SerialConnection;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 import org.slf4j.Logger;
@@ -33,6 +35,9 @@ public class RadioConnection {
 
     @Inject
     private RadioInfo info;
+
+    @Inject @Timer
+    private ScheduledExecutorService scheduler;
 
     /**
      * This publisher emits all received data
@@ -70,14 +75,12 @@ public class RadioConnection {
      */
     private Observable<String> txTransmitted = Observable.zip(txSentToRadio, txTransmittedMark, (a,b) -> a);
 
-    private Timer receiveDataTimer = new Timer("Radio data poller", true);
-    private ReceiveDataTimerTask receiveDataTimerTask;
+    private ScheduledFuture<?> receiveDataTimerTask;
 
     private void clearReceiveTimer() {
         if (receiveDataTimerTask != null) {
             logger.debug("Clearing data receive timer.");
-            receiveDataTimerTask.cancel();
-            receiveDataTimer.purge();
+            receiveDataTimerTask.cancel(false);
             receiveDataTimerTask = null;
         }
     }
@@ -265,15 +268,7 @@ public class RadioConnection {
     private void askForData(long delayMs) {
         logger.debug("Asking for more data in {} ms", delayMs);
         clearReceiveTimer();
-        receiveDataTimerTask = new ReceiveDataTimerTask();
-        receiveDataTimer.schedule(receiveDataTimerTask, delayMs);
-    }
-
-    private class ReceiveDataTimerTask extends TimerTask {
-        @Override
-        public void run() {
-            sendCommand("TB;");
-        }
+        receiveDataTimerTask = scheduler.schedule(() -> sendCommand("TB;"), delayMs, TimeUnit.MILLISECONDS);
     }
 
     /**
