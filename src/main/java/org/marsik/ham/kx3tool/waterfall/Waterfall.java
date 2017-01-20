@@ -4,8 +4,6 @@ import java.util.stream.DoubleStream;
 
 import org.marsik.ham.kx3tool.audio.FftResult;
 
-import javafx.scene.image.PixelFormat;
-import javafx.scene.paint.Color;
 import lombok.Data;
 
 @Data

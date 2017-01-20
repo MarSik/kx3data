@@ -19,17 +19,18 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
@@ -37,15 +38,15 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import jssc.SerialPortException;
@@ -110,6 +111,11 @@ public class MainController implements Initializable {
     @FXML private Button stopAudio;
 
     @FXML private Canvas waterfallCanvas;
+
+    private WritableImage currentWaterfallImage;
+    private AtomicReference<int[]> latestWaterfallLineData = new AtomicReference<>(null);
+    private AtomicReference<FftResult> latestFftResult = new AtomicReference<>(null);
+    private Runnable redrawWaterfall = new RedrawWaterfall();
 
     @Inject
     private Configuration configuration;
@@ -270,6 +276,7 @@ public class MainController implements Initializable {
 
         waterfall.setDynamicRange(0.5);
         waterfall.setReferenceLevel(-0.5);
+        currentWaterfallImage = new WritableImage((int)waterfallCanvas.getWidth(), (int)waterfallCanvas.getHeight());
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
@@ -399,7 +406,7 @@ public class MainController implements Initializable {
         String radioText = now.format(SIMPLE_LOCAL_TIME);
 
         if (info.getRadioModel() != RadioInfo.RadioModel.UNKNOWN) {
-            radioText += " " + (info.getFrequency() != null ? info.getFrequency().toString() : "")
+            radioText += " " + (info.getFrequency() != 0 ? info.getFrequency() : "")
                     + " " + (info.getMode() != null ? info.getMode().name() : "")
                     + " " + (info.isTx() ? "TX" : "RX");
         }
@@ -500,22 +507,52 @@ public class MainController implements Initializable {
         startAudio.setDisable(false);
     }
 
-    volatile int waterfallScanLine = 0;
-
     public void updateWaterfall(final FftResult result) {
         executor.execute(() -> {
             final int[] pixels = waterfall.pixelLine(result);
-            Platform.runLater(() -> {
-                GraphicsContext c2d = waterfallCanvas.getGraphicsContext2D();
-                c2d.getPixelWriter().setPixels(
-                        0, waterfallScanLine,
-                        pixels.length, 1,
-                        WritablePixelFormat.getIntArgbInstance(),
-                        pixels,
-                        0, pixels.length);
-                waterfallScanLine += 1;
-                waterfallScanLine %= (int)waterfallCanvas.getHeight();
-            });
+            latestWaterfallLineData.set(pixels);
+            latestFftResult.set(result);
+            Platform.runLater(redrawWaterfall);
         });
+    }
+
+    private class RedrawWaterfall implements Runnable {
+        @Override
+        public void run() {
+            // Scroll the current content
+            WritableImage newWaterfallImage = new WritableImage((int) currentWaterfallImage.getWidth(), (int) currentWaterfallImage
+                    .getHeight());
+            newWaterfallImage.getPixelWriter().setPixels(0, 1, (int)newWaterfallImage.getWidth(), (int)newWaterfallImage.getHeight() - 1, currentWaterfallImage
+                    .getPixelReader(), 0, 0);
+            currentWaterfallImage = newWaterfallImage;
+
+            // Write the new line
+            final int[] waterfallLine = latestWaterfallLineData.get();
+            currentWaterfallImage.getPixelWriter().setPixels(
+                    0, 0,
+                    waterfallLine.length, 1,
+                    WritablePixelFormat.getIntArgbInstance(),
+                    waterfallLine,
+                    0, waterfallLine.length);
+
+            // Plot the full waterfall to screen
+            waterfallCanvas.getGraphicsContext2D().drawImage(currentWaterfallImage, 0, 0);
+        }
+    }
+
+    public void onWaterfallClick(MouseEvent event) {
+        if (latestFftResult == null) {
+            return;
+        }
+
+        EventTarget target = event.getTarget();
+        if (!(target instanceof Canvas)) {
+            return;
+        }
+
+        Canvas canvas = (Canvas) event.getTarget();
+
+        double freqOffset = latestFftResult.get().frequency(0, (int)(event.getX() - canvas.getWidth()/2));
+        radioConnection.tuneOffset(freqOffset);
     }
 }

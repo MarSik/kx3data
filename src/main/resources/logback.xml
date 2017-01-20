@@ -8,7 +8,7 @@
     </appender>
 
     <logger name="org.marsik.ham.kx3tool.serial.SerialConnection$Data" level="INFO"/>
-    <logger name="org.marsik.ham.kx3tool.audio.AudioCapture" level="DEBUG" />
+    <logger name="org.marsik.ham.kx3tool.audio.AudioCapture" level="INFO" />
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT" />

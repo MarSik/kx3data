@@ -8,12 +8,12 @@ import lombok.Data;
 @Data
 public class RadioInfo {
     private RadioModel radioModel = RadioModel.UNKNOWN;
-    private Long frequency;
-    private Mode mode;
+    private long frequency;
+    private Mode mode = Mode.UNKNOWN;
     private boolean tx;
     private boolean rit;
     private boolean xit;
-    private Integer offset;
+    private int offset;
 
     public enum RadioModel {
         K2,
@@ -32,6 +32,7 @@ public class RadioInfo {
         PSK63,
         RTTY,
         DATAA,
-        AFSKA
+        AFSKA,
+        UNKNOWN
     }
 }

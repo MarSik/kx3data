@@ -333,4 +333,10 @@ public class RadioConnection {
     public Observable<String> getTxTransmittedQueue() {
         return txTransmitted.hide();
     }
+
+    public void tuneOffset(double freqOffset) {
+        long newFreq = (info == null ? 0 : info.getFrequency()) + (long)freqOffset;
+        logger.debug("Tuning to {}Hz", newFreq);
+        sendCommand(String.format("FA%011d;", newFreq));
+    }
 }

@@ -207,7 +207,10 @@
                               <Label text="Refresh rate:" GridPane.rowIndex="3" />
                               <ChoiceBox fx:id="fftSize" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
                               <ChoiceBox fx:id="fftRefresh" prefWidth="150.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="3" />
-                              <Canvas fx:id="waterfallCanvas" height="150.0" width="512.0" GridPane.columnSpan="2147483647" GridPane.halignment="CENTER" GridPane.hgrow="ALWAYS" GridPane.rowIndex="5" GridPane.vgrow="ALWAYS" />
+                              <Canvas fx:id="waterfallCanvas" height="150.0" onMouseClicked="#onWaterfallClick" width="512.0" GridPane.columnSpan="2147483647" GridPane.halignment="CENTER" GridPane.hgrow="ALWAYS" GridPane.rowIndex="5" GridPane.valignment="TOP" GridPane.vgrow="ALWAYS">
+                                 <GridPane.margin>
+                                    <Insets top="5.0" />
+                                 </GridPane.margin></Canvas>
                            </children>
                         </GridPane>
                      </children>

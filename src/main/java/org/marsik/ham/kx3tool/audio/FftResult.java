@@ -14,7 +14,7 @@ public class FftResult {
     Complex[] fftResult;
 
     public double frequency(long baseFrequency, int stepOffset) {
-        return baseFrequency + (double)samplingRate / fftResult.length;
+        return baseFrequency + stepOffset * (double)samplingRate / fftResult.length;
     }
 
     public double[] amplitudes() {
