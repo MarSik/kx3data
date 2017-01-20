@@ -1,5 +1,7 @@
 # A data terminal for Elecraft radios
 
+[![Build Status](https://travis-ci.org/MarSik/kx3data.svg?branch=master)](https://travis-ci.org/MarSik/kx3data)
+
 - Only K3 and KX3 radios are supported;
 - only PSK31, PSK63 and RTTY modes are supported.
 
