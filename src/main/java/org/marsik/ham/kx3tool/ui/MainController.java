@@ -274,8 +274,8 @@ public class MainController implements Initializable {
         inputDac.disableProperty().bind(startAudio.disabledProperty());
         stopAudio.disableProperty().bind(startAudio.disabledProperty().not());
 
-        waterfall.setDynamicRange(0.5);
-        waterfall.setReferenceLevel(-0.5);
+        waterfall.setDynamicRange(60);
+        waterfall.setReferenceLevel(0);
         currentWaterfallImage = new WritableImage((int)waterfallCanvas.getWidth(), (int)waterfallCanvas.getHeight());
     }
 
@@ -541,7 +541,7 @@ public class MainController implements Initializable {
     }
 
     public void onWaterfallClick(MouseEvent event) {
-        if (latestFftResult == null) {
+        if (latestFftResult.get() == null) {
             return;
         }
 
@@ -554,5 +554,21 @@ public class MainController implements Initializable {
 
         double freqOffset = latestFftResult.get().frequency(0, (int)(event.getX() - canvas.getWidth()/2));
         radioConnection.tuneOffset(freqOffset);
+    }
+
+    public void onWaterfallMove(MouseEvent event) {
+        if (latestFftResult.get() == null) {
+            return;
+        }
+
+        EventTarget target = event.getTarget();
+        if (!(target instanceof Canvas)) {
+            return;
+        }
+
+        Canvas canvas = (Canvas) event.getTarget();
+
+        double freq = latestFftResult.get().frequency(radioInfo.getFrequency(), (int)(event.getX() - canvas.getWidth()/2));
+        statusLine.setText("F " + freq);
     }
 }
