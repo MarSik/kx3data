@@ -28,6 +28,8 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
@@ -35,16 +37,20 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import jssc.SerialPortException;
 import org.marsik.ham.kx3tool.audio.AudioCapture;
+import org.marsik.ham.kx3tool.audio.FftResult;
 import org.marsik.ham.kx3tool.cdi.JobExecutor;
 import org.marsik.ham.kx3tool.cdi.Timer;
 import org.marsik.ham.kx3tool.configuration.Configuration;
@@ -52,6 +58,7 @@ import org.marsik.ham.kx3tool.configuration.Macro;
 import org.marsik.ham.kx3tool.radio.RadioConnection;
 import org.marsik.ham.kx3tool.radio.RadioInfo;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
+import org.marsik.ham.kx3tool.waterfall.Waterfall;
 
 public class MainController implements Initializable {
     @FXML private VBox root;
@@ -102,6 +109,8 @@ public class MainController implements Initializable {
     @FXML private Button startAudio;
     @FXML private Button stopAudio;
 
+    @FXML private Canvas waterfallCanvas;
+
     @Inject
     private Configuration configuration;
 
@@ -136,6 +145,8 @@ public class MainController implements Initializable {
 
     @Inject @Timer
     private ScheduledExecutorService scheduler;
+
+    private Waterfall waterfall = new Waterfall();
 
     public void initialize(URL location, ResourceBundle resources) {
         rigConnect.setDisable(false);
@@ -256,6 +267,9 @@ public class MainController implements Initializable {
 
         inputDac.disableProperty().bind(startAudio.disabledProperty());
         stopAudio.disableProperty().bind(startAudio.disabledProperty().not());
+
+        waterfall.setDynamicRange(0.5);
+        waterfall.setReferenceLevel(-0.5);
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
@@ -470,6 +484,7 @@ public class MainController implements Initializable {
     public void onStartAudio(ActionEvent event) {
         try {
             audioCapture = new AudioCapture(audioDevice.getValue(), inputDac.getValue(), executor);
+            audioCapture.getFftResults().subscribe(this::updateWaterfall);
             startAudio.setDisable(true);
             audioCapture.open();
             audioCapture.start();
@@ -483,5 +498,24 @@ public class MainController implements Initializable {
         audioCapture.close();
         audioCapture = null;
         startAudio.setDisable(false);
+    }
+
+    volatile int waterfallScanLine = 0;
+
+    public void updateWaterfall(final FftResult result) {
+        executor.execute(() -> {
+            final int[] pixels = waterfall.pixelLine(result);
+            Platform.runLater(() -> {
+                GraphicsContext c2d = waterfallCanvas.getGraphicsContext2D();
+                c2d.getPixelWriter().setPixels(
+                        0, waterfallScanLine,
+                        pixels.length, 1,
+                        WritablePixelFormat.getIntArgbInstance(),
+                        pixels,
+                        0, pixels.length);
+                waterfallScanLine += 1;
+                waterfallScanLine %= (int)waterfallCanvas.getHeight();
+            });
+        });
     }
 }

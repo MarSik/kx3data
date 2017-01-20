@@ -6,6 +6,9 @@ import java.nio.ShortBuffer;
 
 import org.apache.commons.math3.complex.Complex;
 
+/**
+ * KX3 transmits Q in the Left channel and I in the right channel
+ */
 public class PcmIQReader extends IQReader {
     public static final int CHANNELS = 2;
     private boolean bigEndian;
@@ -26,8 +29,8 @@ public class PcmIQReader extends IQReader {
                 .asShortBuffer();
 
         for (int i = 0; i < expectedSize; i++) {
-            iqData[i] = sampler.convert(shortBuffer.get(CHANNELS * i) / -Short.MIN_VALUE,
-                    shortBuffer.get(CHANNELS * i + 1) / -Short.MIN_VALUE,
+            iqData[i] = sampler.convert(shortBuffer.get(CHANNELS * i) / (double)-Short.MIN_VALUE,
+                    shortBuffer.get(CHANNELS * i + 1) / (double)-Short.MIN_VALUE,
                     i, expectedSize);
         }
 

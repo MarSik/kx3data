@@ -19,9 +19,13 @@ import org.apache.commons.math3.complex.Complex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
+import io.reactivex.subjects.Subject;
+
 public class AudioCapture implements AutoCloseable, Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(AudioCapture.class);
-    public static final int FFT_SIZE = 1024;
+    public static final int FFT_SIZE = 512;
     public final int FFT_RATE = 30;
 
     private final Mixer mixer; // the sound card
@@ -37,6 +41,8 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
     private final FrequencyAnalyzer frequencyAnalyzer;
     private final IQReader.IQSample iqSampler;
     private final IQReader iqReader;
+
+    private final Subject<FftResult> fftResults = PublishSubject.create();
 
     public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, ExecutorService executor) throws LineUnavailableException {
         this.executor = executor;
@@ -135,9 +141,11 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
                 received = 0;
 
                 // prepare data for FFT
-                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, 0, FFT_SIZE * format.getFrameSize()));
+                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, data.length - FFT_SIZE * format.getFrameSize(), data.length));
                 Complex[] freqData = frequencyAnalyzer.analyze(iqData);
-                logger.debug("Frequency data: {}", (Object[]) freqData);
+                FftResult fftResult = new FftResult(format.getSampleRate(), freqData);
+                logger.debug("Frequency data: {}", fftResult.amplitudes());
+                fftResults.onNext(fftResult);
             }
         }
 
@@ -145,5 +153,9 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
         logger.debug("Audio capture stopped.");
 
         return null;
+    }
+
+    public Observable<FftResult> getFftResults() {
+        return fftResults.hide();
     }
 }
