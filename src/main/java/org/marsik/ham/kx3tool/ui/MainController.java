@@ -45,7 +45,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -111,6 +113,7 @@ public class MainController implements Initializable {
     @FXML private Button stopAudio;
 
     @FXML private Canvas waterfallCanvas;
+    @FXML private Pane waterfallPane;
 
     private WritableImage currentWaterfallImage;
     private AtomicReference<int[]> latestWaterfallLineData = new AtomicReference<>(null);
@@ -277,6 +280,9 @@ public class MainController implements Initializable {
         waterfall.setDynamicRange(60);
         waterfall.setReferenceLevel(0);
         currentWaterfallImage = new WritableImage((int)waterfallCanvas.getWidth(), (int)waterfallCanvas.getHeight());
+
+        waterfallCanvas.widthProperty().bind(waterfallPane.widthProperty());
+        waterfallCanvas.heightProperty().bind(waterfallPane.heightProperty());
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
@@ -519,15 +525,32 @@ public class MainController implements Initializable {
     private class RedrawWaterfall implements Runnable {
         @Override
         public void run() {
-            // Scroll the current content
-            WritableImage newWaterfallImage = new WritableImage((int) currentWaterfallImage.getWidth(), (int) currentWaterfallImage
-                    .getHeight());
-            newWaterfallImage.getPixelWriter().setPixels(0, 1, (int)newWaterfallImage.getWidth(), (int)newWaterfallImage.getHeight() - 1, currentWaterfallImage
-                    .getPixelReader(), 0, 0);
+            // Resize canvas
+            waterfallCanvas.resize(
+                    waterfallCanvas.getParent().getLayoutBounds().getWidth() - 10,
+                    waterfallCanvas.getParent().getLayoutBounds().getHeight());
+
+            final int[] waterfallLine = latestWaterfallLineData.get();
+            WritableImage newWaterfallImage = new WritableImage(waterfallLine.length,
+                    (int) waterfallCanvas.getHeight());
+
+            // Scroll and resize the current content
+            int border = (int)((newWaterfallImage.getWidth() - currentWaterfallImage.getWidth()) / 2);
+            int height = (int)Math.min(currentWaterfallImage.getHeight(), newWaterfallImage.getHeight());
+            int width = (int)Math.min(currentWaterfallImage.getWidth(), newWaterfallImage.getWidth());
+
+            int cutoffborder = 0;
+            if (border < 0) {
+                cutoffborder = -border;
+                border = 0;
+            }
+
+            newWaterfallImage.getPixelWriter().setPixels(border, 1,
+                    width, height - 1,
+                    currentWaterfallImage.getPixelReader(), cutoffborder, 0);
             currentWaterfallImage = newWaterfallImage;
 
             // Write the new line
-            final int[] waterfallLine = latestWaterfallLineData.get();
             currentWaterfallImage.getPixelWriter().setPixels(
                     0, 0,
                     waterfallLine.length, 1,
@@ -536,7 +559,9 @@ public class MainController implements Initializable {
                     0, waterfallLine.length);
 
             // Plot the full waterfall to screen
-            waterfallCanvas.getGraphicsContext2D().drawImage(currentWaterfallImage, 0, 0);
+            waterfallCanvas.getGraphicsContext2D().drawImage(currentWaterfallImage,
+                    0, 0, currentWaterfallImage.getWidth(), currentWaterfallImage.getHeight(),
+                    0, 0, waterfallCanvas.getWidth(), waterfallCanvas.getHeight());
         }
     }
 

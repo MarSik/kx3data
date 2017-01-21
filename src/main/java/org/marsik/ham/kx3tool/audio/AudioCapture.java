@@ -25,8 +25,8 @@ import io.reactivex.subjects.Subject;
 
 public class AudioCapture implements AutoCloseable, Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(AudioCapture.class);
-    public static final int FFT_SIZE = 512;
-    public final int FFT_RATE = 15;
+    public static final int FFT_SIZE = 1024;
+    public final int FFT_RATE = 30;
 
     private final Mixer mixer; // the sound card
     private final TargetDataLine line; // the actual DAC
