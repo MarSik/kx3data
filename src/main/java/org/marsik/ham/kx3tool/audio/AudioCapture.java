@@ -7,7 +7,6 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.Port;
 import javax.sound.sampled.TargetDataLine;
-import java.nio.Buffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -49,6 +48,7 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
 
         mixer = AudioSystem.getMixer(mixerInfo);
         line = (TargetDataLine) mixer.getLine(lineInfo);
+
         format = line.getFormat();
         this.fftSize = fftSize;
 

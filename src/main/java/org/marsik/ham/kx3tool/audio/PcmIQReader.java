@@ -8,6 +8,7 @@ import org.apache.commons.math3.complex.Complex;
 
 /**
  * KX3 transmits Q in the Left channel and I in the right channel
+ * PCM usually orders data as left (n), right (n+1), left (2*n), right (2*n + 1), ...
  */
 public class PcmIQReader extends IQReader {
     public static final int CHANNELS = 2;
@@ -27,10 +28,11 @@ public class PcmIQReader extends IQReader {
         ShortBuffer shortBuffer = ByteBuffer.wrap(data)
                 .order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN)
                 .asShortBuffer();
+        double maxValue = -Short.MIN_VALUE;
 
         for (int i = 0; i < expectedSize; i++) {
-            iqData[i] = sampler.convert(shortBuffer.get(CHANNELS * i) / (double)-Short.MIN_VALUE,
-                    shortBuffer.get(CHANNELS * i + 1) / (double)-Short.MIN_VALUE,
+            iqData[i] = sampler.convert(shortBuffer.get(CHANNELS * i) / maxValue,
+                    shortBuffer.get(CHANNELS * i + 1) / maxValue,
                     i, expectedSize);
         }
 

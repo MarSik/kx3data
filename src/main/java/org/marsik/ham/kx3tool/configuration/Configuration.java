@@ -78,4 +78,23 @@ public class Configuration {
             return Paths.get(System.getProperty("user.dir"));
         }
     }
+
+    private static Path dataHome() {
+        Map<String, String> env = System.getenv();
+        if (env.containsKey("XDG_DATA_HOME")) {
+            return Paths.get(env.get("XDG_DATA_HOME"), APP_DIR_NAME);
+        } else if (env.containsKey("APPDATA")) {
+            return Paths.get(env.get("APPDATA"), APP_DIR_NAME);
+        } else if ("Mac OS X".equals(System.getProperty("os.name"))) {
+            return Paths.get(env.get("HOME"), "Library", "Application Support", APP_DIR_NAME);
+        } else if ("Linux".equals(System.getProperty("os.name"))) {
+            return Paths.get(env.get("HOME"), ".local", "share", APP_DIR_NAME);
+        } else {
+            return Paths.get(System.getProperty("user.dir"));
+        }
+    }
+
+    public static Path logbookFile() {
+        return dataHome().resolve("logbook.h2");
+    }
 }
