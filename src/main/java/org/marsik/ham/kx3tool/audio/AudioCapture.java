@@ -25,15 +25,12 @@ import io.reactivex.subjects.Subject;
 
 public class AudioCapture implements AutoCloseable, Callable<Void> {
     private static final Logger logger = LoggerFactory.getLogger(AudioCapture.class);
-    public static final int FFT_SIZE = 1024;
-    public final int FFT_RATE = 30;
 
     private final Mixer mixer; // the sound card
     private final TargetDataLine line; // the actual DAC
 
     private final byte[] data;
     private final AudioFormat format;
-    private Buffer dataWrapper;
 
     private final ExecutorService executor;
     private Future<?> captureRunning;
@@ -44,16 +41,20 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
 
     private final Subject<FftResult> fftResults = PublishSubject.create();
 
-    public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, ExecutorService executor) throws LineUnavailableException {
+    private final int fftSize;
+
+    public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, ExecutorService executor,
+                        int fftSize, int fftRefresh) throws LineUnavailableException {
         this.executor = executor;
 
         mixer = AudioSystem.getMixer(mixerInfo);
         line = (TargetDataLine) mixer.getLine(lineInfo);
         format = line.getFormat();
+        this.fftSize = fftSize;
 
-        data = new byte[computeBufferSize((int)format.getFrameRate(), format.getFrameSize(), FFT_RATE)];
+        data = new byte[computeBufferSize((int)format.getFrameRate(), format.getFrameSize(), fftRefresh)];
         frequencyAnalyzer = new FrequencyAnalyzer();
-        iqSampler = new HammingIqSampler(FFT_SIZE);
+        iqSampler = new HammingIqSampler(fftSize);
 
         if (format.getSampleSizeInBits() == 16) {
             iqReader = new PcmIQReader(iqSampler, format.isBigEndian());
@@ -141,7 +142,7 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
                 received = 0;
 
                 // prepare data for FFT
-                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, data.length - FFT_SIZE * format.getFrameSize(), data.length));
+                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, data.length - fftSize * format.getFrameSize(), data.length));
                 Complex[] freqData = frequencyAnalyzer.analyze(iqData);
                 FftResult fftResult = new FftResult(format.getSampleRate(), freqData);
                 logger.debug("Frequency data: {}", fftResult.amplitudes());

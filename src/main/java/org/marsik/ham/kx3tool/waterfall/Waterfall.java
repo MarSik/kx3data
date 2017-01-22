@@ -2,14 +2,38 @@ package org.marsik.ham.kx3tool.waterfall;
 
 import java.util.stream.DoubleStream;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.marsik.ham.kx3tool.audio.FftResult;
 
 import lombok.Data;
 
-@Data
 public class Waterfall {
+    @Getter @Setter
     private double referenceLevel = 0.0;
+    @Getter @Setter
     private double dynamicRange = 60.0;
+
+    public void lowerReference(double delta) {
+        referenceLevel -= delta;
+    }
+
+    public void higherReference(double delta) {
+        referenceLevel += delta;
+    }
+
+    public void increateDynamicRange(double delta) {
+        dynamicRange += delta;
+    }
+
+    public void decreaseDynamicRange(double delta) {
+        dynamicRange -= delta;
+    }
+
+    public void reset() {
+        referenceLevel = 0.0;
+        dynamicRange = 60.0;
+    }
 
     private int valueToIntPixel(double ampl) {
         /*

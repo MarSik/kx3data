@@ -184,6 +184,9 @@
                           <columnConstraints>
                               <ColumnConstraints hgrow="NEVER" minWidth="10.0" prefWidth="100.0" />
                             <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" prefWidth="100.0" />
+                              <ColumnConstraints halignment="RIGHT" hgrow="NEVER" />
+                              <ColumnConstraints halignment="CENTER" hgrow="NEVER" />
+                              <ColumnConstraints hgrow="NEVER" />
                           </columnConstraints>
                           <rowConstraints>
                             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
@@ -213,6 +216,14 @@
                                     <Canvas fx:id="waterfallCanvas" height="150.0" onMouseClicked="#onWaterfallClick" onMouseMoved="#onWaterfallMove" width="512.0" />
                                  </children>
                               </Pane>
+                              <Button mnemonicParsing="false" onAction="#onLowerBase" text="Lower" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                              <Button mnemonicParsing="false" onAction="#onLessBandwidth" text="Less" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                              <Button mnemonicParsing="false" onAction="#onHigherBase" text="Higher" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+                              <Button mnemonicParsing="false" onAction="#onMoreBandwidth" text="More" GridPane.columnIndex="4" GridPane.rowIndex="3" />
+                              <Label text="Base level" GridPane.columnIndex="3" />
+                              <Label text="Dynamic range" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                              <Label fx:id="dbBaseLevel" text="0 dB" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
+                              <Label fx:id="dbDynamicRange" text="0 dB" GridPane.columnIndex="3" GridPane.halignment="CENTER" GridPane.rowIndex="3" />
                            </children>
                         </GridPane>
                      </children>

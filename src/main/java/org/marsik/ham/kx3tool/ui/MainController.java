@@ -108,12 +108,17 @@ public class MainController implements Initializable {
     @FXML private ChoiceBox<Mixer.Info> audioDevice;
     @FXML private ChoiceBox<DataLine.Info> inputDac;
     @FXML private Label inputDacLabel;
+    @FXML private ChoiceBox<Integer> fftSize;
+    @FXML private ChoiceBox<Integer> fftRefresh;
 
     @FXML private Button startAudio;
     @FXML private Button stopAudio;
 
     @FXML private Canvas waterfallCanvas;
     @FXML private Pane waterfallPane;
+
+    @FXML private Label dbBaseLevel;
+    @FXML private Label dbDynamicRange;
 
     private WritableImage currentWaterfallImage;
     private AtomicReference<int[]> latestWaterfallLineData = new AtomicReference<>(null);
@@ -271,11 +276,18 @@ public class MainController implements Initializable {
             }
         });
 
+        fftSize.getItems().addAll(256, 512, 1024, 2048, 4096, 6144, 8192);
+        fftSize.setValue(1024);
+        fftRefresh.getItems().addAll(5, 10, 15, 20, 30, 45, 60, 100);
+        fftRefresh.setValue(20);
+
         audioDevice.setValue(availableDevices.get(0));
         audioDevice.disableProperty().bind(startAudio.disabledProperty());
 
         inputDac.disableProperty().bind(startAudio.disabledProperty());
         stopAudio.disableProperty().bind(startAudio.disabledProperty().not());
+        fftSize.disableProperty().bind(startAudio.disabledProperty());
+        fftRefresh.disableProperty().bind(startAudio.disabledProperty());
 
         waterfall.setDynamicRange(60);
         waterfall.setReferenceLevel(0);
@@ -283,6 +295,13 @@ public class MainController implements Initializable {
 
         waterfallCanvas.widthProperty().bind(waterfallPane.widthProperty());
         waterfallCanvas.heightProperty().bind(waterfallPane.heightProperty());
+
+        updateWaterfallLevels();
+    }
+
+    private void updateWaterfallLevels() {
+        dbBaseLevel.setText((int)waterfall.getReferenceLevel() + " dB");
+        dbDynamicRange.setText((int)waterfall.getDynamicRange() + " dB");
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
@@ -496,7 +515,8 @@ public class MainController implements Initializable {
 
     public void onStartAudio(ActionEvent event) {
         try {
-            audioCapture = new AudioCapture(audioDevice.getValue(), inputDac.getValue(), executor);
+            audioCapture = new AudioCapture(audioDevice.getValue(), inputDac.getValue(), executor,
+                    fftSize.getValue(), fftRefresh.getValue());
             audioCapture.getFftResults().subscribe(this::updateWaterfall);
             startAudio.setDisable(true);
             audioCapture.open();
@@ -525,11 +545,6 @@ public class MainController implements Initializable {
     private class RedrawWaterfall implements Runnable {
         @Override
         public void run() {
-            // Resize canvas
-            waterfallCanvas.resize(
-                    waterfallCanvas.getParent().getLayoutBounds().getWidth() - 10,
-                    waterfallCanvas.getParent().getLayoutBounds().getHeight());
-
             final int[] waterfallLine = latestWaterfallLineData.get();
             WritableImage newWaterfallImage = new WritableImage(waterfallLine.length,
                     (int) waterfallCanvas.getHeight());
@@ -595,5 +610,25 @@ public class MainController implements Initializable {
 
         double freq = latestFftResult.get().frequency(radioInfo.getFrequency(), (int)(event.getX() - canvas.getWidth()/2));
         statusLine.setText("F " + freq);
+    }
+
+    public void onLowerBase(ActionEvent event) {
+        waterfall.lowerReference(5.0);
+        updateWaterfallLevels();
+    }
+
+    public void onHigherBase(ActionEvent event) {
+        waterfall.higherReference(5.0);
+        updateWaterfallLevels();
+    }
+
+    public void onLessBandwidth(ActionEvent event) {
+        waterfall.decreaseDynamicRange(5.0);
+        updateWaterfallLevels();
+    }
+
+    public void onMoreBandwidth(ActionEvent event) {
+        waterfall.increateDynamicRange(5.0);
+        updateWaterfallLevels();
     }
 }
