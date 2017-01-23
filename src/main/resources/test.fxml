@@ -266,7 +266,7 @@
                                              </HBox.margin></Button>
                                        </children>
                                     </HBox>
-                                    <TextArea fx:id="dataRx" editable="false" focusTraversable="false" wrapText="true" VBox.vgrow="ALWAYS" />
+                                    <TextArea fx:id="dataRx" editable="false" focusTraversable="false" onKeyPressed="#forwardFunctionKeys" wrapText="true" VBox.vgrow="ALWAYS" />
                                     <HBox fillHeight="false" maxWidth="1.7976931348623157E308" VBox.vgrow="NEVER">
                                        <children>
                                           <CheckBox fx:id="autoScrollCheckBox" mnemonicParsing="false" selected="true" text="Follow the received data" />
@@ -281,7 +281,7 @@
                               </VBox>
                               <VBox>
                                  <children>
-                                    <TextArea fx:id="dataTx" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
+                                    <TextArea fx:id="dataTx" onKeyPressed="#forwardFunctionKeys" prefHeight="200.0" prefWidth="200.0" wrapText="true" VBox.vgrow="ALWAYS" />
                                     <HBox VBox.vgrow="NEVER">
                                        <children>
                                           <FlowPane prefWidth="2000.0" vgap="5.0" HBox.hgrow="ALWAYS">

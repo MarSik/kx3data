@@ -12,6 +12,7 @@ import java.net.URL;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -20,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -38,14 +40,15 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -634,5 +637,16 @@ public class MainController implements Initializable {
     public void onMoreBandwidth(ActionEvent event) {
         waterfall.increateDynamicRange(5.0);
         updateWaterfallLevels();
+    }
+
+    public static List<KeyCodeCombination> FUNCTION_KEYS = Arrays.asList(KeyCode.F1, KeyCode.F2, KeyCode.F3,
+            KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8).stream()
+            .map(KeyCodeCombination::new)
+            .collect(Collectors.toList());
+
+    public void forwardFunctionKeys(KeyEvent event) {
+        if (FUNCTION_KEYS.stream().anyMatch(e -> e.match(event))) {
+            root.fireEvent(event);
+        }
     }
 }
