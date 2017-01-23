@@ -91,6 +91,8 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
     }
 
     public void stop() {
+        // Important, causes read interrupt, the thread woould not finish otherwise
+        line.stop();
         captureRunning.cancel(true);
     }
 
@@ -130,7 +132,7 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
     public Void call() throws Exception {
         logger.debug("Audio capture starting.");
         line.start();
-        logger.debug("Audio capture started.");
+        logger.info("Audio capture started.");
 
         int received = 0;
         while (!Thread.currentThread().isInterrupted()) {
@@ -150,8 +152,7 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
             }
         }
 
-        line.stop();
-        logger.debug("Audio capture stopped.");
+        logger.info("Audio capture stopped.");
 
         return null;
     }

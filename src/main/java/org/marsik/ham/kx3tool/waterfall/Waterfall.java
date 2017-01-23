@@ -79,7 +79,7 @@ public class Waterfall {
      * @return
      */
     protected double scale(double ampl) {
-        ampl = 10 * Math.log(ampl); // compute the dB below reference level 1.0
+        ampl = 20 * Math.log(ampl); // compute the dB below reference level 1.0
         ampl = Math.max(referenceLevel - dynamicRange, ampl); // Limit the bottom
         ampl = Math.min(referenceLevel, ampl); // Limit the top
         ampl += -(referenceLevel - dynamicRange); // Move to positive space

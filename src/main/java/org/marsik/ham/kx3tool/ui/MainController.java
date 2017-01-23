@@ -120,6 +120,8 @@ public class MainController implements Initializable {
     @FXML private Label dbBaseLevel;
     @FXML private Label dbDynamicRange;
 
+    @FXML private Label labelFrequency;
+
     private WritableImage currentWaterfallImage;
     private AtomicReference<int[]> latestWaterfallLineData = new AtomicReference<>(null);
     private AtomicReference<FftResult> latestFftResult = new AtomicReference<>(null);
@@ -289,7 +291,7 @@ public class MainController implements Initializable {
         fftSize.disableProperty().bind(startAudio.disabledProperty());
         fftRefresh.disableProperty().bind(startAudio.disabledProperty());
 
-        waterfall.setDynamicRange(60);
+        waterfall.setDynamicRange(100);
         waterfall.setReferenceLevel(0);
         currentWaterfallImage = new WritableImage((int)waterfallCanvas.getWidth(), (int)waterfallCanvas.getHeight());
 
@@ -435,6 +437,8 @@ public class MainController implements Initializable {
                     + " " + (info.getMode() != null ? info.getMode().name() : "")
                     + " " + (info.isTx() ? "TX" : "RX");
         }
+
+        labelFrequency.setText(info.getFrequency() != 0 ? String.format("%,d MHz", info.getFrequency()) : "");
 
         final String statusText = info.getRadioModel().name();
 
