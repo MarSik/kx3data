@@ -33,6 +33,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
@@ -48,9 +49,12 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.ArcType;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import jssc.SerialPortException;
@@ -123,6 +127,9 @@ public class MainController implements Initializable {
     @FXML private Label dbDynamicRange;
 
     @FXML private Label labelFrequency;
+
+    @FXML private AnchorPane smithPane;
+    @FXML private Canvas smithCanvas;
 
     private WritableImage currentWaterfallImage;
     private AtomicReference<int[]> latestWaterfallLineData = new AtomicReference<>(null);
@@ -301,6 +308,51 @@ public class MainController implements Initializable {
         waterfallCanvas.heightProperty().bind(waterfallPane.heightProperty());
 
         updateWaterfallLevels();
+
+        smithCanvas.widthProperty().bind(smithPane.widthProperty());
+        smithCanvas.heightProperty().bind(smithPane.heightProperty());
+
+        Platform.runLater(this::redrawSmithChart);
+    }
+
+    private static double[] IMPEDANCE_CIRCLES = new double[] {0.2f, 0.5f, 1f, 2f, 5f, 10f};
+
+    private void redrawSmithChart() {
+        double height = smithCanvas.getHeight() - 4;
+        double cy = 2 + height / 2;
+
+        double width = smithCanvas.getWidth() - 4;
+        double cx = 2 + width / 2;
+
+        double radius = Math.min(height, width) / 2;
+
+        GraphicsContext gc = smithCanvas.getGraphicsContext2D();
+
+        // prepare clip
+        gc.beginPath();
+        gc.arc(cx, cy, radius, radius, 0, Math.PI * 2 * radius);
+        gc.closePath();
+        gc.clip();
+
+        // set color
+        gc.setStroke(Color.GRAY);
+
+        // border and 0 reactance line
+        gc.strokeOval(2, 2, 2*radius, 2*radius);
+        gc.strokeLine(2, 2 + radius, 2 + 2*radius, 2 + radius);
+
+        // constant impedance circles
+        for(double r: IMPEDANCE_CIRCLES){
+            double circleRadius = radius / (1 + r);
+            gc.strokeOval(width - 2*circleRadius, cy - circleRadius, 2*circleRadius, 2*circleRadius);
+        }
+
+        // constant reactance circles
+        for(double r: IMPEDANCE_CIRCLES){
+            double circleRadius = radius / r;
+            gc.strokeOval(width - circleRadius, cy, 2*circleRadius, 2*circleRadius);
+            gc.strokeOval(width - circleRadius, cy - 2*circleRadius, 2*circleRadius, 2*circleRadius);
+        }
     }
 
     private void updateWaterfallLevels() {
