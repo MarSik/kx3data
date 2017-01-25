@@ -257,7 +257,7 @@ public class RadioConnection {
                  int pushed = Math.max(lastRadioTxBufferSize - txPending, 0);
                  if (pushed > 0) {
                      logger.debug("Succesfully transmitted {} chars", pushed);
-                     IntegerSequence.range(1, pushed).forEach(txTransmittedMark::onNext);
+                     IntStream.rangeClosed(1, pushed).forEach(txTransmittedMark::onNext);
                      lastRadioTxBufferSize = txPending;
                  }
 
@@ -316,7 +316,7 @@ public class RadioConnection {
         txBuffer = txBuffer.substring(part.length());
         askForData(TX_POLL_DELAY_MS);
 
-        IntegerSequence.range(1, part.length()).forEach(txSentToRadioMark::onNext);
+        IntStream.rangeClosed(1, part.length()).forEach(txSentToRadioMark::onNext);
         lastRadioTxBufferSize += part.length();
     }
 
