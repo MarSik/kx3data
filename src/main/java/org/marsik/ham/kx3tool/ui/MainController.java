@@ -40,6 +40,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
@@ -71,6 +72,7 @@ import org.marsik.ham.kx3tool.waterfall.Waterfall;
 public class MainController implements Initializable {
     @FXML private VBox root;
     @FXML private Pane dataPane;
+    @FXML private Tab dataTab;
 
     @FXML private Button dataSend;
 
@@ -372,8 +374,10 @@ public class MainController implements Initializable {
     }
 
     private void addButtonAccelerator(Button button, KeyCodeCombination accel) {
-        Platform.runLater(() -> {
-            button.getScene().getAccelerators().put(accel, button::fire);
+        dataPane.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+            if (accel.match(ev)) {
+                button.fire();
+            }
         });
     }
 
