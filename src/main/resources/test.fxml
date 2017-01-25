@@ -256,7 +256,7 @@
                   </AnchorPane>
               </content>
             </Tab>
-            <Tab text="Data">
+            <Tab fx:id="dataTab" text="Data">
               <content>
                 <AnchorPane fx:id="dataPane" minHeight="0.0" minWidth="0.0">
                      <children>
