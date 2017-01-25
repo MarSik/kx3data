@@ -4,11 +4,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
@@ -57,23 +59,27 @@ public class RadioConnection {
 
     /**
      * A trigger for pushing one character from txQueue to txSentToRadio
+     * lower than zero 0 means failure, greater than or zero success
      */
     private PublishSubject<Integer> txSentToRadioMark = PublishSubject.create();
 
     /**
      * A trigger for pushing one character from txSentToRadio to txTransmitted
+     * lower than zero 0 means failure, greater than or zero success
      */
     private PublishSubject<Integer> txTransmittedMark = PublishSubject.create();
 
     /**
      * A queue of all characters that were sent to radio for transmit
      */
-    private Observable<String> txSentToRadio = Observable.zip(txQueue, txSentToRadioMark, (a,b) -> a);
+    private Observable<TransmitStatus> txSentToRadio = Observable.zip(txQueue, txSentToRadioMark,
+            (a,b) -> new TransmitStatus(a, b >= 0));
 
     /**
      * A queue of all characters that were sucessfully transmitted.
      */
-    private Observable<String> txTransmitted = Observable.zip(txSentToRadio, txTransmittedMark, (a,b) -> a);
+    private Observable<TransmitStatus> txTransmitted = Observable.zip(txSentToRadio, txTransmittedMark,
+            (a,b) -> a.signalSuccess(b >= 0));
 
     private ScheduledFuture<?> receiveDataTimerTask;
 
@@ -101,6 +107,21 @@ public class RadioConnection {
     public void close() throws Exception {
         serialPort.close();
         serialPort = null;
+        transmissionAborted();
+    }
+
+    private void transmissionAborted() {
+        // "Send" remaining data to radio with status failed
+        final List<String> tokens = splitToCharacters(txBuffer);
+        tokens.forEach((s) -> txSentToRadioMark.onNext(-1));
+
+        // Signal transmit error for all untransmitted data
+        int inRadioCount = lastRadioTxBufferSize + tokens.size();
+        IntStream.rangeClosed(1, inRadioCount).forEach((i) -> txTransmittedMark.onNext(-i));
+
+        // Reset tx buffer
+        txBuffer = "";
+        lastRadioTxBufferSize = 0;
     }
 
     public void sendCommand(String cmd) {
@@ -308,10 +329,14 @@ public class RadioConnection {
     public void sendData(String data) {
         txBuffer = txBuffer + data;
 
-        Arrays.asList(data.split("(?!^)")).forEach(txQueue::onNext);
+        splitToCharacters(data).forEach(txQueue::onNext);
 
         processReceivedData();
         sendDataFromBuffer(9 - lastRadioTxBufferSize, false);
+    }
+
+    private List<String> splitToCharacters(String data) {
+        return Arrays.asList(data.split("(?!^)"));
     }
 
     public Observable<String> getRxQueue() {
@@ -326,11 +351,11 @@ public class RadioConnection {
         return infoQueue.hide();
     }
 
-    public Observable<String> getTxSentToRadioQueue() {
+    public Observable<TransmitStatus> getTxSentToRadioQueue() {
         return txSentToRadio.hide();
     }
 
-    public Observable<String> getTxTransmittedQueue() {
+    public Observable<TransmitStatus> getTxTransmittedQueue() {
         return txTransmitted.hide();
     }
 

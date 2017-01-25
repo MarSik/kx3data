@@ -251,8 +251,10 @@ public class MainController implements Initializable {
         radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
         radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
         radioConnection.getTxTransmittedQueue().subscribe(c -> Platform.runLater(() -> {
-            removeFromStartKeepSelection(txBuffer, c);
-            appendKeepSelection(dataRx, c);
+            removeFromStartKeepSelection(txBuffer, c.getContent());
+            if (c.isSuccessful()) {
+                appendKeepSelection(dataRx, c.getContent());
+            }
             if (txBuffer.getText().isEmpty()) {
                 txInProgress.setVisible(false);
             }
