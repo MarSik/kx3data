@@ -54,7 +54,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.ArcType;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import jssc.SerialPortException;
@@ -71,6 +70,7 @@ import org.marsik.ham.kx3tool.waterfall.Waterfall;
 
 public class MainController implements Initializable {
     @FXML private VBox root;
+    @FXML private Pane dataPane;
 
     @FXML private Button dataSend;
 
@@ -173,6 +173,11 @@ public class MainController implements Initializable {
 
     private Waterfall waterfall = new Waterfall();
 
+    public static List<KeyCodeCombination> FUNCTION_KEYS = Arrays.asList(KeyCode.F1, KeyCode.F2, KeyCode.F3,
+            KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8).stream()
+            .map(KeyCodeCombination::new)
+            .collect(Collectors.toList());
+
     public void initialize(URL location, ResourceBundle resources) {
         rigConnect.setDisable(false);
         rigDisconnect.setDisable(true);
@@ -205,6 +210,10 @@ public class MainController implements Initializable {
         // Start clock
         scheduler.scheduleAtFixedRate(() -> notify(radioInfo),
                 0, 1, TimeUnit.SECONDS);
+
+        // Workaround https://bugs.openjdk.java.net/browse/JDK-8094695 by setting the filter
+        // so the function key events do not reach the text areas
+        dataPane.addEventFilter(KeyEvent.KEY_PRESSED, this::processFunctionKeysEarly);
 
         updateMacroButton(1, macro1, configuration.getMacro(1));
         macro1.setOnAction(new MacroButtonClicked(1));
@@ -692,14 +701,10 @@ public class MainController implements Initializable {
         updateWaterfallLevels();
     }
 
-    public static List<KeyCodeCombination> FUNCTION_KEYS = Arrays.asList(KeyCode.F1, KeyCode.F2, KeyCode.F3,
-            KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8).stream()
-            .map(KeyCodeCombination::new)
-            .collect(Collectors.toList());
-
-    public void forwardFunctionKeys(KeyEvent event) {
+    public void processFunctionKeysEarly(KeyEvent event) {
         if (FUNCTION_KEYS.stream().anyMatch(e -> e.match(event))) {
             root.fireEvent(event);
+            event.consume();
         }
     }
 }
