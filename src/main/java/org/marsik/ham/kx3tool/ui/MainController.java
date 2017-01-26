@@ -182,12 +182,22 @@ public class MainController implements Initializable {
 
     public void initialize(URL location, ResourceBundle resources) {
         rigConnect.setDisable(false);
-        rigDisconnect.setDisable(true);
         vnaConnect.setDisable(false);
-        vnaDisconnect.setDisable(true);
         atuConnect.setDisable(false);
-        atuDisconnect.setDisable(true);
-        dataSend.setDisable(true);
+
+        rigBaudRate.disableProperty().bind(rigConnect.disabledProperty());
+        rigSerialPort.disableProperty().bind(rigConnect.disabledProperty());
+        rigDisconnect.disableProperty().bind(rigConnect.disabledProperty().not());
+        dataSend.disableProperty().bind(rigDisconnect.disabledProperty());
+
+        vnaDisconnect.disableProperty().bind(vnaConnect.disabledProperty().not());
+        vnaBaudRate.disableProperty().bind(vnaConnect.disabledProperty());
+        vnaSerialPort.disableProperty().bind(vnaConnect.disabledProperty());
+
+        atuDisconnect.disableProperty().bind(atuConnect.disabledProperty().not());
+        atuBaudRate.disableProperty().bind(atuConnect.disabledProperty());
+        atuProtocol.disableProperty().bind(atuConnect.disabledProperty());
+        atuSerialPort.disableProperty().bind(atuConnect.disabledProperty());
 
         txInProgress.managedProperty().bind(txInProgress.visibleProperty());
         txInProgress.setVisible(false);
@@ -452,13 +462,9 @@ public class MainController implements Initializable {
     public void onRigConnect(ActionEvent event) {
         try {
             radioConnection.open(rigSerialPort.getValue(), rigBaudRate.getValue());
-            rigBaudRate.setDisable(true);
-            rigSerialPort.setDisable(true);
             rigConnect.setDisable(true);
-            rigDisconnect.setDisable(false);
             refreshSerialPortList(atuSerialPort);
             refreshSerialPortList(vnaSerialPort);
-            dataSend.setDisable(false);
         } catch (SerialPortException ex) {
             ex.printStackTrace();
         }
@@ -467,13 +473,9 @@ public class MainController implements Initializable {
     public void onRigDisconnect(ActionEvent event) {
         try {
             radioConnection.close();
-            rigBaudRate.setDisable(false);
-            rigSerialPort.setDisable(false);
             rigConnect.setDisable(false);
-            rigDisconnect.setDisable(true);
             refreshSerialPortList(atuSerialPort);
             refreshSerialPortList(vnaSerialPort);
-            dataSend.setDisable(true);
         } catch (Exception e) {
             e.printStackTrace();
         }
