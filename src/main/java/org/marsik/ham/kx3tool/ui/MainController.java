@@ -621,8 +621,16 @@ public class MainController implements Initializable {
         @Override
         public void run() {
             final int[] waterfallLine = latestWaterfallLineData.get();
-            WritableImage newWaterfallImage = new WritableImage(waterfallLine.length,
-                    (int) waterfallCanvas.getHeight());
+            final WritableImage newWaterfallImage;
+
+            // Allocate new Image, but only when the needed size changed
+            if (waterfallLine.length != (int)currentWaterfallImage.getWidth()
+                    || (int) waterfallCanvas.getHeight() != (int)currentWaterfallImage.getHeight()) {
+                newWaterfallImage = new WritableImage(waterfallLine.length,
+                        (int) waterfallCanvas.getHeight());
+            } else {
+                newWaterfallImage = currentWaterfallImage;
+            }
 
             // Scroll and resize the current content
             int border = (int)((newWaterfallImage.getWidth() - currentWaterfallImage.getWidth()) / 2);
