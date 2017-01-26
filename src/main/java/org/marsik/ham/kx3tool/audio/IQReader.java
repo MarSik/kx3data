@@ -13,10 +13,10 @@ public abstract class IQReader {
         this.sampler = sampler;
     }
 
-    public abstract Complex[] read(Complex[] template, byte[] data);
+    public abstract Complex[] read(Complex[] template, byte[] data, int offset, int len);
 
     protected Complex[] prepareArray(Complex[] template, int size) {
-        if (template != null) {
+        if (template != null && template.length == size) {
             return template;
         } else {
             return new Complex[size];

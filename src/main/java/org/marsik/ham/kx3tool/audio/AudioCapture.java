@@ -42,6 +42,9 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
 
     private final int fftSize;
 
+    // Cache the complex array instance
+    private Complex[] iqData;
+
     public AudioCapture(Mixer.Info mixerInfo, DataLine.Info lineInfo, ExecutorService executor,
                         int fftSize, int fftRefresh) throws LineUnavailableException {
         this.executor = executor;
@@ -144,7 +147,7 @@ public class AudioCapture implements AutoCloseable, Callable<Void> {
                 received = 0;
 
                 // prepare data for FFT
-                Complex[] iqData = iqReader.read(null, Arrays.copyOfRange(data, data.length - fftSize * format.getFrameSize(), data.length));
+                iqData = iqReader.read(iqData, data, data.length - fftSize * format.getFrameSize(), fftSize * format.getFrameSize());
                 Complex[] freqData = frequencyAnalyzer.analyze(iqData);
                 FftResult fftResult = new FftResult(format.getSampleRate(), freqData);
                 logger.debug("Frequency data: {}", fftResult.amplitudes());

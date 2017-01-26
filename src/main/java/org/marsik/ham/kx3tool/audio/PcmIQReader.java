@@ -20,12 +20,12 @@ public class PcmIQReader extends IQReader {
     }
 
     @Override
-    public Complex[] read(Complex[] template, byte[] data) {
-        final int expectedSize = data.length / (CHANNELS * Short.BYTES);
+    public Complex[] read(Complex[] template, byte[] data, int offset, int len) {
+        final int expectedSize = len / (CHANNELS * Short.BYTES);
         Complex[] iqData = prepareArray(template, expectedSize);
         assert iqData.length == expectedSize;
 
-        ShortBuffer shortBuffer = ByteBuffer.wrap(data)
+        ShortBuffer shortBuffer = ByteBuffer.wrap(data, offset, len)
                 .order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN)
                 .asShortBuffer();
         double maxValue = -Short.MIN_VALUE;
