@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -175,8 +176,8 @@ public class MainController implements Initializable {
 
     private Waterfall waterfall = new Waterfall();
 
-    public static List<KeyCodeCombination> FUNCTION_KEYS = Arrays.asList(KeyCode.F1, KeyCode.F2, KeyCode.F3,
-            KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8).stream()
+    public static List<KeyCodeCombination> FUNCTION_KEYS = Stream.of(KeyCode.F1, KeyCode.F2, KeyCode.F3,
+            KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8)
             .map(KeyCodeCombination::new)
             .collect(Collectors.toList());
 
