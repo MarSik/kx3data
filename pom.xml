@@ -88,6 +88,7 @@
             <artifactId>rxjava</artifactId>
             <version>2.0.4</version>
         </dependency>
+        <!-- Use rxjavafx 2.0 when it is released //-->
 
         <!-- UI extensions //-->
         <dependency>

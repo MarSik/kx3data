@@ -201,7 +201,7 @@ public class MainController implements Initializable {
         atuSerialPort.disableProperty().bind(atuConnect.disabledProperty());
 
         txInProgress.managedProperty().bind(txInProgress.visibleProperty());
-        txInProgress.setVisible(false);
+        txInProgress.visibleProperty().bind(txBuffer.textProperty().isEmpty().not());
 
         //dataSend.setDisable(true);
         rigBaudRate.getItems().addAll(serialUtil.getAvailableBaudRates());
@@ -216,9 +216,13 @@ public class MainController implements Initializable {
         vnaBaudRate.getItems().addAll(serialUtil.getAvailableBaudRates());
         vnaBaudRate.setValue(38400);
 
-        refreshSerialPortList(rigSerialPort);
-        refreshSerialPortList(atuSerialPort);
-        refreshSerialPortList(vnaSerialPort);
+        Stream.of(rigSerialPort, atuSerialPort, vnaSerialPort).forEach(combo -> {
+            combo.disabledProperty().addListener(x -> {
+                refreshSerialPortList(combo);
+            });
+            serialUtil.getAvailabilityStream().map(x -> combo).filter(c -> !c.isDisable()).forEach(this::refreshSerialPortList);
+            refreshSerialPortList(combo);
+        });
 
         // Start clock
         scheduler.scheduleAtFixedRate(() -> notify(radioInfo),
@@ -276,9 +280,6 @@ public class MainController implements Initializable {
             removeFromStartKeepSelection(txBuffer, c.getContent());
             if (c.isSuccessful()) {
                 appendKeepSelection(dataRx, c.getContent());
-            }
-            if (txBuffer.getText().isEmpty()) {
-                txInProgress.setVisible(false);
             }
         }));
         radioConnection.getInfoQueue().subscribe(this::notify);
@@ -436,6 +437,10 @@ public class MainController implements Initializable {
     }
 
     private void refreshSerialPortList(ComboBox<String> combobox) {
+        if (combobox.isDisable()) {
+            return;
+        }
+
         final List<String> availablePorts = serialUtil.getAvailablePorts();
         // XXX Make this more efficient
         // Add new ports and remove missing ports without touching the rest
@@ -443,12 +448,7 @@ public class MainController implements Initializable {
                 .filter(p -> !combobox.getItems().contains(p))
                 .forEach(combobox.getItems()::add);
 
-        for (Iterator<String> it = combobox.getItems().iterator(); it.hasNext(); ) {
-            String value = it.next();
-            if (! availablePorts.contains(value)) {
-                it.remove();
-            }
-        }
+        combobox.getItems().removeIf(value -> !availablePorts.contains(value));
 
         if (combobox.getItems().isEmpty()) {
             combobox.setValue(null);
@@ -485,7 +485,6 @@ public class MainController implements Initializable {
     public void onDataSend(ActionEvent event) {
         radioConnection.sendData(dataTx.getText());
         dataTx.clear();
-        txInProgress.setVisible(true);
         dataTx.requestFocus();
     }
 

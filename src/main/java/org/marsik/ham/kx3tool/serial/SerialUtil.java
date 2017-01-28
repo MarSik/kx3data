@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
 import jssc.SerialPort;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
@@ -16,6 +18,7 @@ import jssc.SerialPortList;
 @Singleton
 public class SerialUtil {
     Map<String, SerialConnection> openPorts = new HashMap<>();
+    PublishSubject<SerialPortAvailability> availabilityStream = PublishSubject.create();
 
     public List<String> getAvailablePorts() {
         return Collections.unmodifiableList(
@@ -38,8 +41,16 @@ public class SerialUtil {
 
     public SerialConnection open(String portName, int baudRate) throws SerialPortException {
         SerialConnection port = new SerialConnection(portName, baudRate);
-        port.addCloseListener(p -> openPorts.remove(p.getPortName()));
+        port.addCloseListener(p -> {
+            openPorts.remove(p.getPortName());
+            availabilityStream.onNext(new SerialPortAvailability(portName, true));
+        });
         openPorts.put(portName, port);
+        availabilityStream.onNext(new SerialPortAvailability(portName, false));
         return port;
+    }
+
+    public Observable<SerialPortAvailability> getAvailabilityStream() {
+        return availabilityStream.hide();
     }
 }
