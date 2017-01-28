@@ -69,6 +69,7 @@ import org.marsik.ham.kx3tool.configuration.Configuration;
 import org.marsik.ham.kx3tool.configuration.Macro;
 import org.marsik.ham.kx3tool.radio.RadioConnection;
 import org.marsik.ham.kx3tool.radio.RadioInfo;
+import org.marsik.ham.kx3tool.radio.TransmitStatus;
 import org.marsik.ham.kx3tool.serial.SerialUtil;
 import org.marsik.ham.kx3tool.waterfall.Waterfall;
 
@@ -221,10 +222,14 @@ public class MainController implements Initializable {
         vnaBaudRate.setValue(38400);
 
         Stream.of(rigSerialPort, atuSerialPort, vnaSerialPort).forEach(combo -> {
-            combo.disabledProperty().addListener(x -> {
-                refreshSerialPortList(combo);
-            });
-            serialUtil.getAvailabilityStream().map(x -> combo).filter(c -> !c.isDisable()).forEach(this::refreshSerialPortList);
+            // Register events handlers
+            combo.disabledProperty().addListener(x -> refreshSerialPortList(combo));
+            serialUtil.getAvailabilityStream().map(x -> combo)
+                    .observeOn(javaFxScheduler)
+                    .filter(c -> !c.isDisable())
+                    .forEach(this::refreshSerialPortList);
+
+            // Refresh now to get the initial state populated
             refreshSerialPortList(combo);
         });
 
@@ -278,17 +283,18 @@ public class MainController implements Initializable {
 
         addButtonAccelerator(dataSend, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN));
 
-        radioConnection.getRxQueue().subscribeOn(javaFxScheduler)
+        radioConnection.getRxQueue().observeOn(javaFxScheduler)
                 .subscribe(s -> appendKeepSelection(dataRx, s));
-        radioConnection.getTxQueue().subscribeOn(javaFxScheduler)
+        radioConnection.getTxQueue().observeOn(javaFxScheduler)
                 .subscribe(s -> appendKeepSelection(txBuffer, s));
-        radioConnection.getTxTransmittedQueue().subscribeOn(javaFxScheduler)
-                .subscribe(c -> {
-                    removeFromStartKeepSelection(txBuffer, c.getContent());
-                    if (c.isSuccessful()) {
-                        appendKeepSelection(dataRx, c.getContent());
-                    }
-                });
+
+        radioConnection.getTxTransmittedQueue().observeOn(javaFxScheduler)
+                .subscribe(c -> removeFromStartKeepSelection(txBuffer, c.getContent()));
+        radioConnection.getTxTransmittedQueue()
+                .filter(TransmitStatus::isSuccessful)
+                .observeOn(javaFxScheduler)
+                .subscribe(c -> appendKeepSelection(dataRx, c.getContent()));
+
         radioConnection.getInfoQueue().subscribe(this::notify);
 
         final List<Mixer.Info> availableDevices = AudioCapture.getAvailableDevices();
