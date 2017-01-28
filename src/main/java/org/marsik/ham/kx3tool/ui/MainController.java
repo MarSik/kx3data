@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.reactivex.Scheduler;
+import io.reactivex.schedulers.Schedulers;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -174,6 +176,8 @@ public class MainController implements Initializable {
     @Inject @Timer
     private ScheduledExecutorService scheduler;
 
+    private Scheduler javaFxScheduler = Schedulers.from(Platform::runLater);
+
     private Waterfall waterfall = new Waterfall();
 
     public static List<KeyCodeCombination> FUNCTION_KEYS = Stream.of(KeyCode.F1, KeyCode.F2, KeyCode.F3,
@@ -274,14 +278,17 @@ public class MainController implements Initializable {
 
         addButtonAccelerator(dataSend, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN));
 
-        radioConnection.getRxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(dataRx, s)));
-        radioConnection.getTxQueue().subscribe(s -> Platform.runLater(() -> appendKeepSelection(txBuffer, s)));
-        radioConnection.getTxTransmittedQueue().subscribe(c -> Platform.runLater(() -> {
-            removeFromStartKeepSelection(txBuffer, c.getContent());
-            if (c.isSuccessful()) {
-                appendKeepSelection(dataRx, c.getContent());
-            }
-        }));
+        radioConnection.getRxQueue().subscribeOn(javaFxScheduler)
+                .subscribe(s -> appendKeepSelection(dataRx, s));
+        radioConnection.getTxQueue().subscribeOn(javaFxScheduler)
+                .subscribe(s -> appendKeepSelection(txBuffer, s));
+        radioConnection.getTxTransmittedQueue().subscribeOn(javaFxScheduler)
+                .subscribe(c -> {
+                    removeFromStartKeepSelection(txBuffer, c.getContent());
+                    if (c.isSuccessful()) {
+                        appendKeepSelection(dataRx, c.getContent());
+                    }
+                });
         radioConnection.getInfoQueue().subscribe(this::notify);
 
         final List<Mixer.Info> availableDevices = AudioCapture.getAvailableDevices();
@@ -301,15 +308,12 @@ public class MainController implements Initializable {
         audioDevice.getItems().addAll(availableDevices);
         inputDacLabel.visibleProperty().bind(inputDac.visibleProperty());
 
-        audioDevice.valueProperty().addListener(new ChangeListener<Mixer.Info>() {
-            @Override
-            public void changed(ObservableValue<? extends Mixer.Info> observable, Mixer.Info oldValue, Mixer.Info newValue) {
-                final List<DataLine.Info> inputLines = AudioCapture.getInputLines(newValue);
-                inputDac.setVisible(inputLines.size() > 1);
-                inputDac.getItems().clear();
-                inputDac.getItems().addAll(inputLines);
-                inputDac.setValue(inputLines.get(0));
-            }
+        audioDevice.valueProperty().addListener((observable, oldValue, newValue) -> {
+            final List<DataLine.Info> inputLines = AudioCapture.getInputLines(newValue);
+            inputDac.setVisible(inputLines.size() > 1);
+            inputDac.getItems().clear();
+            inputDac.getItems().addAll(inputLines);
+            inputDac.setValue(inputLines.get(0));
         });
 
         fftSize.getItems().addAll(256, 512, 1024, 2048, 4096, 6144, 8192);
